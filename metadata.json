@@ -1,0 +1,7 @@
+{
+  "name": "ShawezGPT",
+  "description": "A unified workspace featuring multi-project isolation, autonomous Mission Mode with DAG execution, isolated chats, files, memory engine, searchable artifact library, and agent & tool registries.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
