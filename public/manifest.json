@@ -1,0 +1,19 @@
+{
+  "name": "ShawezGPT — AI Intelligence",
+  "short_name": "ShawezGPT",
+  "description": "Production-grade AI chatbot with multi-model intelligence, autonomous mission planner, offline Ollama fallback, and smart memory.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#020617",
+  "theme_color": "#059669",
+  "categories": ["productivity", "utilities", "developer"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -15,6 +15,7 @@ import {
   RegistryHealthReport,
   RegistryTestReport,
   ToolRegistryItem,
+  ProviderPoolStatus,
 } from "../types";
 import { generateProfessionalPDF } from "./pdfGenerator";
 
@@ -419,6 +420,10 @@ export async function checkServerHealth(): Promise<{
   appName: string;
   defaultModel: string;
   apiKeyConfigured: boolean;
+  geminiKeyCount?: number;
+  geminiHealthyKeys?: number;
+  ollamaConnected?: boolean;
+  ollamaModelCount?: number;
 }> {
   try {
     const res = await fetch("/api/health");
@@ -431,6 +436,27 @@ export async function checkServerHealth(): Promise<{
       defaultModel: "gemini-3.7-flash",
       apiKeyConfigured: false,
     };
+  }
+}
+
+export async function fetchProviderPoolStatus(): Promise<ProviderPoolStatus | null> {
+  try {
+    const res = await fetch("/api/providers/status");
+    if (!res.ok) throw new Error("Failed to fetch providers status");
+    return await res.json();
+  } catch (err) {
+    console.error("Error fetching provider status:", err);
+    return null;
+  }
+}
+
+export async function fetchOllamaStatus(): Promise<any> {
+  try {
+    const res = await fetch("/api/ollama/status");
+    if (!res.ok) throw new Error("Failed to fetch ollama status");
+    return await res.json();
+  } catch (err) {
+    return { isConnected: false, models: [], error: "Not reachable" };
   }
 }
 

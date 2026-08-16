@@ -2,13 +2,24 @@ import { runRegistryTestSuite } from "./registry.test";
 import { runMemoryTestSuite } from "./memory.test";
 import { runEndToEndTestSuite } from "./e2e.test";
 import { runSecurityHardeningAudit } from "./security";
+import { runProvidersTestSuite } from "./providers/providers.test";
 
 export async function runAllProductionTestSuites() {
   console.log("\n=======================================================");
-  console.log("  SHAWEZGPT COMPLETE 24-TEST REGRESSION & SECURITY SUITE");
+  console.log("  SHAWEZGPT COMPLETE REGRESSION, PROVIDER & SECURITY SUITE");
   console.log("=======================================================\n");
 
   const startTime = Date.now();
+
+  console.log("--- 0. Running Multi-Gemini & Ollama Providers Test Suite (4 tests) ---");
+  const provReport = await runProvidersTestSuite();
+  console.log(`Results: ${provReport.passed}/${provReport.totalTests} passed (${provReport.durationMs}ms)`);
+  for (const r of provReport.results) {
+    console.log(`  [${r.passed ? "PASS" : "FAIL"}] ${r.testName} (${r.durationMs}ms)`);
+    if (r.error) {
+      console.error(`         Error: ${r.error}`);
+    }
+  }
 
   console.log("--- 1. Running Agent & Tool Registry Test Suite (7 tests) ---");
   const regReport = await runRegistryTestSuite();

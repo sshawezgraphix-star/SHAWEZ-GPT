@@ -141,8 +141,17 @@ export const Header: React.FC<HeaderProps> = ({
                     id={`model-option-${model.id}`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-xs sm:text-sm">{model.name}</span>
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                      <div className="flex items-center gap-1.5 truncate pr-2">
+                        <span className="text-xs">{model.provider === "ollama" ? "🦙" : "⚡"}</span>
+                        <span className="font-semibold text-xs sm:text-sm truncate">{model.name}</span>
+                      </div>
+                      <span
+                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 font-bold ${
+                          model.provider === "ollama"
+                            ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30"
+                            : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                        }`}
+                      >
                         {model.badge}
                       </span>
                     </div>

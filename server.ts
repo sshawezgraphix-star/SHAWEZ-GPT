@@ -2,7 +2,6 @@ import express, { Request, Response } from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
-import { GoogleGenAI } from "@google/genai";
 import {
   createRateLimiter,
   analyzePromptSecurity,
@@ -10,8 +9,14 @@ import {
   validateAttachment,
 } from "./server/security";
 import { sanitizeCredentials } from "./server/memory/sanitizer";
+import { getGeminiKeyPool } from "./server/providers/geminiPool";
+import { getOllamaProvider, OllamaProvider } from "./server/providers/ollama";
 
 dotenv.config();
+
+// Initialize Key Pool and Ollama Provider
+const geminiPool = getGeminiKeyPool();
+const ollamaProvider = getOllamaProvider();
 
 const app = express();
 const PORT = 3000;
@@ -37,22 +42,6 @@ app.use("/api", apiRateLimiter);
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// Lazy Google GenAI initialization helper
-function getGeminiClient(): GoogleGenAI {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY environment variable is missing.");
-  }
-  return new GoogleGenAI({
-    apiKey,
-    httpOptions: {
-      headers: {
-        "User-Agent": "aistudio-build",
-      },
-    },
-  });
-}
-
 // Helper to extract clean human-friendly error messages
 function extractCleanErrorMessage(error: any): string {
   if (!error) return "An unexpected error occurred.";
@@ -75,54 +64,13 @@ function extractCleanErrorMessage(error: any): string {
     return "This AI model is temporarily experiencing high server demand. Please try again in a few moments or switch models in the top bar.";
   }
   if (msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED")) {
-    return "Rate limit reached. Please wait a brief moment before sending your next request.";
+    return "Rate limit reached on current key. Auto-failover is rotating to the next available API key in the pool.";
   }
   // Sanitize any accidentally leaked tokens or keys in error traces
   const sanitized = sanitizeCredentials(msg);
   return sanitized.sanitizedText;
 }
 
-// Helper to stream with automatic fallback on 503/overload
-async function getStreamResponse(ai: GoogleGenAI, requestedModel: string, contents: any, config: any) {
-  const fallbackList: string[] = [];
-  if (requestedModel === "gemini-3.7-flash") {
-    fallbackList.push("gemini-2.5-flash", "gemini-3.1-flash-lite");
-  } else if (requestedModel === "gemini-3.1-pro-preview") {
-    fallbackList.push("gemini-2.5-pro", "gemini-3.7-flash");
-  } else if (requestedModel === "gemini-3.1-flash-lite") {
-    fallbackList.push("gemini-2.5-flash");
-  }
-
-  const modelsToTry = [requestedModel, ...fallbackList];
-  let lastError: any = null;
-
-  for (let i = 0; i < modelsToTry.length; i++) {
-    const currentModel = modelsToTry[i];
-    try {
-      const responseStream = await ai.models.generateContentStream({
-        model: currentModel,
-        contents,
-        config,
-      });
-      return { responseStream, modelUsed: currentModel };
-    } catch (err: any) {
-      lastError = err;
-      const errMsg = err?.message || String(err);
-      const is503OrUnavailable =
-        errMsg.includes("503") ||
-        errMsg.includes("UNAVAILABLE") ||
-        errMsg.includes("high demand") ||
-        errMsg.includes("Service Unavailable");
-
-      if (!is503OrUnavailable || i === modelsToTry.length - 1) {
-        throw err;
-      }
-      console.warn(`Model ${currentModel} busy (503), attempting fallback to ${modelsToTry[i + 1]}...`);
-      await new Promise((r) => setTimeout(r, 350));
-    }
-  }
-  throw lastError;
-}
 const AVAILABLE_MODELS = [
   {
     id: "gemini-3.7-flash",
@@ -131,6 +79,7 @@ const AVAILABLE_MODELS = [
     contextWindow: "1M tokens",
     badge: "Recommended",
     category: "Balanced & Fast",
+    provider: "gemini",
     supportsSearch: true,
     supportsVision: true,
   },
@@ -141,6 +90,7 @@ const AVAILABLE_MODELS = [
     contextWindow: "2M tokens",
     badge: "Deep Reasoning",
     category: "Advanced Intelligence",
+    provider: "gemini",
     supportsSearch: true,
     supportsVision: true,
   },
@@ -151,32 +101,94 @@ const AVAILABLE_MODELS = [
     contextWindow: "1M tokens",
     badge: "Lightning Fast",
     category: "Low Latency",
+    provider: "gemini",
     supportsSearch: true,
     supportsVision: true,
   },
 ];
 
 // 1. Health check endpoint
-app.get("/api/health", (req: Request, res: Response) => {
-  const hasKey = Boolean(process.env.GEMINI_API_KEY);
+app.get("/api/health", async (req: Request, res: Response) => {
+  const poolStats = geminiPool.getPoolStats();
+  const ollamaStatus = await ollamaProvider.getStatus();
+
   res.json({
     status: "ok",
     appName: process.env.SYSTEM_BRAND_NAME || "ShawezGPT",
     defaultModel: process.env.DEFAULT_AI_MODEL || "gemini-3.7-flash",
-    apiKeyConfigured: hasKey,
+    apiKeyConfigured: poolStats.totalKeys > 0,
+    geminiKeyCount: poolStats.totalKeys,
+    geminiHealthyKeys: poolStats.healthyKeys,
+    ollamaConnected: ollamaStatus.isConnected,
+    ollamaModelCount: ollamaStatus.models.length,
     timestamp: new Date().toISOString(),
   });
 });
 
-// 2. Models list endpoint
-app.get("/api/models", (req: Request, res: Response) => {
-  res.json({
-    models: AVAILABLE_MODELS,
-    defaultModel: process.env.DEFAULT_AI_MODEL || "gemini-3.7-flash",
-  });
+// 1b. Providers status endpoint (Detailed Telemetry for 3 Gemini Keys + Ollama)
+app.get("/api/providers/status", async (req: Request, res: Response) => {
+  try {
+    const poolStats = geminiPool.getPoolStats();
+    const ollamaStatus = await ollamaProvider.getStatus();
+
+    res.json({
+      geminiPool: poolStats,
+      ollama: ollamaStatus,
+      failoverReady: poolStats.totalKeys > 1 || ollamaStatus.isConnected,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: extractCleanErrorMessage(err) });
+  }
 });
 
-// 3. Title Generation Endpoint (Generates smart 3-5 word title)
+// 1c. Ollama status and models endpoint
+app.get("/api/ollama/status", async (req: Request, res: Response) => {
+  try {
+    const status = await ollamaProvider.getStatus();
+    res.json(status);
+  } catch (err: any) {
+    res.status(500).json({ error: extractCleanErrorMessage(err) });
+  }
+});
+
+// 2. Models list endpoint (merges Gemini + Ollama models dynamically)
+app.get("/api/models", async (req: Request, res: Response) => {
+  try {
+    const ollamaStatus = await ollamaProvider.getStatus();
+    const dynamicModels = [...AVAILABLE_MODELS];
+
+    if (ollamaStatus.isConnected && ollamaStatus.models.length > 0) {
+      ollamaStatus.models.forEach((m) => {
+        const paramSize = m.details?.parameter_size ? ` (${m.details.parameter_size})` : "";
+        dynamicModels.push({
+          id: `ollama:${m.name}`,
+          name: `Ollama: ${m.name}${paramSize}`,
+          description: `Local/Offline model running via Ollama. No API quota limits, 100% private.`,
+          contextWindow: "128K tokens",
+          badge: "Ollama Local (Unlimited Quota)",
+          category: "Local / Open Source",
+          provider: "ollama",
+          supportsSearch: false,
+          supportsVision: m.name.includes("llava") || m.name.includes("vision"),
+        });
+      });
+    }
+
+    res.json({
+      models: dynamicModels,
+      defaultModel: process.env.DEFAULT_AI_MODEL || "gemini-3.7-flash",
+      ollamaActive: ollamaStatus.isConnected,
+    });
+  } catch (err: any) {
+    res.json({
+      models: AVAILABLE_MODELS,
+      defaultModel: "gemini-3.7-flash",
+    });
+  }
+});
+
+// 3. Title Generation Endpoint (Gemini Multi-Key with Ollama Fallback)
 app.post("/api/chat/title", async (req: Request, res: Response) => {
   try {
     const { prompt } = req.body;
@@ -184,17 +196,33 @@ app.post("/api/chat/title", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Prompt is required" });
     }
 
-    const ai = getGeminiClient();
-    const response = await ai.models.generateContent({
-      model: "gemini-3.7-flash",
-      contents: `Generate a short, concise, and catchy title (3 to 5 words, no quotation marks, no punctuation at end) summarizing this initial user query:\n\n"${prompt.slice(0, 300)}"`,
-      config: {
-        temperature: 0.5,
-      },
-    });
+    // Try Gemini pool first
+    try {
+      if (geminiPool.getKeysCount() > 0) {
+        const response = await geminiPool.generateContent(
+          "gemini-3.7-flash",
+          `Generate a short, concise, and catchy title (3 to 5 words, no quotation marks, no punctuation at end) summarizing this initial user query:\n\n"${prompt.slice(0, 300)}"`,
+          { temperature: 0.5 }
+        );
+        const title = response.text?.trim().replace(/^["']|["']$/g, "") || prompt.slice(0, 30);
+        return res.json({ title });
+      }
+    } catch (geminiErr) {
+      console.warn("Gemini title generation failed, falling back to Ollama or prompt truncation...", geminiErr);
+    }
 
-    const title = response.text?.trim().replace(/^["']|["']$/g, "") || prompt.slice(0, 30);
-    res.json({ title });
+    // Fallback to Ollama if connected
+    const ollamaStatus = await ollamaProvider.getStatus();
+    if (ollamaStatus.isConnected && ollamaStatus.models.length > 0) {
+      const ollamaModel = ollamaStatus.models[0].name;
+      const title = await ollamaProvider.generateText(
+        `Summarize this user query in 3 to 5 words for a chat title. Output only the short title:\n"${prompt.slice(0, 300)}"`,
+        ollamaModel
+      );
+      return res.json({ title: title.trim().replace(/^["']|["']$/g, "") });
+    }
+
+    res.json({ title: prompt.slice(0, 24) || "New Conversation" });
   } catch (error: any) {
     console.error("Title generation error:", error?.message || error);
     res.status(500).json({ title: req.body?.prompt?.slice(0, 24) || "New Conversation" });
@@ -229,10 +257,41 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
       return;
     }
 
-    const ai = getGeminiClient();
+    const isOllamaSelected = OllamaProvider.isOllamaModelId(model);
 
-    // Prepare contents history for multi-turn Gemini generateContentStream
-    // We transform the messages into Gemini SDK contents structure
+    // CASE 1: User explicitly selected an Ollama Model
+    if (isOllamaSelected) {
+      try {
+        const result = await ollamaProvider.streamChat(
+          messages,
+          model,
+          {
+            systemInstruction,
+            temperature: Number(temperature) || 0.7,
+            onChunk: (text) => {
+              sendEvent("chunk", { text, modelUsed: `ollama:${OllamaProvider.cleanModelName(model)}` });
+            },
+          }
+        );
+
+        sendEvent("done", {
+          fullText: result.fullText,
+          sources: [],
+          modelUsed: result.modelUsed,
+        });
+        res.end();
+        return;
+      } catch (ollamaErr: any) {
+        console.error("Ollama streaming error:", ollamaErr);
+        sendEvent("error", {
+          message: `Ollama error: ${ollamaErr?.message || "Failed to communicate with local Ollama server."}. Ensure Ollama is running (ollama serve).`,
+        });
+        res.end();
+        return;
+      }
+    }
+
+    // CASE 2: Gemini Multi-Key Pool Execution with Auto-Failover to Ollama
     const contents: Array<{ role: "user" | "model"; parts: any[] }> = [];
 
     for (let i = 0; i < messages.length; i++) {
@@ -244,7 +303,6 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
       if (msg.attachments && Array.isArray(msg.attachments)) {
         for (const att of msg.attachments) {
           if (att.data && att.mimeType) {
-            // If it is an image or visual file supported by inlineData
             if (att.mimeType.startsWith("image/")) {
               parts.push({
                 inlineData: {
@@ -253,7 +311,6 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
                 },
               });
             } else if (att.textContent) {
-              // Code file or text document preview
               parts.push({
                 text: `[Attached File: ${att.name || "document"}]\n\`\`\`\n${att.textContent}\n\`\`\``,
               });
@@ -262,7 +319,6 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
         }
       }
 
-      // Add the message text if present
       if (msg.content && msg.content.trim()) {
         parts.push({ text: msg.content });
       }
@@ -272,7 +328,6 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
       }
     }
 
-    // Config options
     const config: any = {
       temperature: Number(temperature) || 0.7,
     };
@@ -286,14 +341,50 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
       config.tools = [{ googleSearch: {} }];
     }
 
-    // Call generateContentStream with automatic fallback on temporary 503 high-demand
-    const requestedModel = model || process.env.DEFAULT_AI_MODEL || "gemini-3.7-flash";
-    const { responseStream, modelUsed } = await getStreamResponse(
-      ai,
-      requestedModel,
-      contents as any,
-      config
-    );
+    let streamResult;
+    try {
+      streamResult = await geminiPool.generateContentStream(
+        model || "gemini-3.7-flash",
+        contents,
+        config
+      );
+    } catch (geminiPoolErr: any) {
+      console.warn("All Gemini keys exhausted or failed, checking Ollama fallback...", geminiPoolErr);
+
+      // Attempt emergency fallback to Ollama if connected!
+      const ollamaStatus = await ollamaProvider.getStatus();
+      if (ollamaStatus.isConnected && ollamaStatus.models.length > 0) {
+        const fallbackOllamaModel = ollamaStatus.models[0].name;
+        sendEvent("chunk", {
+          text: `> ℹ️ *Gemini API quota currently cooling down across all keys. Seamlessly switching to local Ollama (${fallbackOllamaModel}) with unlimited quota...*\n\n`,
+          modelUsed: `ollama:${fallbackOllamaModel}`,
+        });
+
+        const fallbackResult = await ollamaProvider.streamChat(
+          messages,
+          fallbackOllamaModel,
+          {
+            systemInstruction,
+            temperature: Number(temperature) || 0.7,
+            onChunk: (text) => {
+              sendEvent("chunk", { text, modelUsed: `ollama:${fallbackOllamaModel}` });
+            },
+          }
+        );
+
+        sendEvent("done", {
+          fullText: fallbackResult.fullText,
+          sources: [],
+          modelUsed: fallbackResult.modelUsed,
+        });
+        res.end();
+        return;
+      }
+
+      throw geminiPoolErr;
+    }
+
+    const { responseStream, modelUsed, keyId } = streamResult;
 
     let fullText = "";
     let extractedGroundingSources: Array<{ title: string; uri: string }> = [];
@@ -302,7 +393,7 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
       const chunkText = chunk.text;
       if (chunkText) {
         fullText += chunkText;
-        sendEvent("chunk", { text: chunkText, modelUsed });
+        sendEvent("chunk", { text: chunkText, modelUsed, keyId });
       }
 
       // Check for grounding metadata
@@ -322,12 +413,11 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
       }
     }
 
-    // Send grounding sources if found
     if (extractedGroundingSources.length > 0) {
       sendEvent("grounding", { sources: extractedGroundingSources });
     }
 
-    sendEvent("done", { fullText, sources: extractedGroundingSources, modelUsed });
+    sendEvent("done", { fullText, sources: extractedGroundingSources, modelUsed, keyId });
     res.end();
   } catch (error: any) {
     console.error("Chat streaming error:", error?.message || error);
@@ -823,7 +913,7 @@ app.post("/api/orchestrator/stream", async (req: Request, res: Response) => {
       synthesizeFinalResponse,
     } = await import("./server/orchestrator");
 
-    const ai = getGeminiClient();
+    const ai = geminiPool.getPrimaryClient();
 
     // 1. INTENT ANALYSIS & TASK PLANNING
     sendEvent("phase_change", { phase: "planning", statusText: "Analyzing intent and constructing execution plan..." });

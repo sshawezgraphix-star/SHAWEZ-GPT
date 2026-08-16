@@ -305,6 +305,8 @@ export interface AIModel {
   contextWindow: string;
   badge: string;
   category: string;
+  provider?: "gemini" | "ollama";
+  isLocal?: boolean;
   supportsSearch: boolean;
   supportsVision: boolean;
 }
@@ -328,6 +330,39 @@ export interface UserProfile {
   isGuest?: boolean;
 }
 
+export interface KeyTelemetryItem {
+  id: string;
+  index: number;
+  maskedKey: string;
+  status: "healthy" | "cooling_down" | "invalid";
+  cooldownUntil: number;
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  lastUsedAt: number;
+  lastError?: string;
+}
+
+export interface ProviderPoolStatus {
+  geminiPool: {
+    totalKeys: number;
+    healthyKeys: number;
+    coolingDownKeys: number;
+    keys: KeyTelemetryItem[];
+    activeKeyIndex: number;
+  };
+  ollama: {
+    isConnected: boolean;
+    baseUrl: string;
+    models: Array<{ name: string; model: string; size: number; details?: any }>;
+    defaultModel?: string;
+    version?: string;
+    error?: string;
+  };
+  failoverReady: boolean;
+  timestamp: string;
+}
+
 export interface AppSettings {
   theme: "dark" | "light" | "system";
   defaultModelId: string;
@@ -340,6 +375,8 @@ export interface AppSettings {
   speechVoice?: string;
   speechRate: number;
   orchestratorMode: "auto" | "always" | "off";
+  ollamaBaseUrl?: string;
+  enableOllamaFallback?: boolean;
 }
 
 // ==========================================
