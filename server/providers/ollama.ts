@@ -143,19 +143,25 @@ export class OllamaProvider {
     for (const msg of messages) {
       const role = msg.role === "assistant" || msg.role === "model" ? "assistant" : "user";
       const images: string[] = [];
+      let messageContent = msg.content || "";
 
       if (msg.attachments && Array.isArray(msg.attachments)) {
         for (const att of msg.attachments) {
           if (att.mimeType?.startsWith("image/") && att.data) {
-            // Remove base64 header
             images.push(att.data.replace(/^data:[^;]+;base64,/, ""));
+          } else if (att.textContent) {
+            messageContent += `\n\n[Attached File: ${att.name || "file"}]\n\`\`\`\n${att.textContent.slice(0, 50000)}\n\`\`\``;
           }
         }
       }
 
+      if (!messageContent.trim() && images.length > 0) {
+        messageContent = "Please describe and analyze the attached image.";
+      }
+
       ollamaMessages.push({
         role,
-        content: msg.content || "",
+        content: messageContent.trim() || "(empty message)",
         ...(images.length > 0 ? { images } : {}),
       });
     }

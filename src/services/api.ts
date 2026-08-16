@@ -19,6 +19,39 @@ import {
 } from "../types";
 import { generateProfessionalPDF } from "./pdfGenerator";
 
+export function getApiBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("shawezgpt_backend_url");
+    if (saved && saved.trim()) {
+      return saved.trim().replace(/\/+$/, "");
+    }
+  }
+  return "";
+}
+
+export function setCustomBackendUrl(url: string): void {
+  if (typeof window !== "undefined") {
+    if (!url || !url.trim()) {
+      localStorage.removeItem("shawezgpt_backend_url");
+    } else {
+      localStorage.setItem("shawezgpt_backend_url", url.trim().replace(/\/+$/, ""));
+    }
+  }
+}
+
+export function getCustomBackendUrl(): string {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("shawezgpt_backend_url") || "";
+  }
+  return "";
+}
+
+export function buildApiUrl(path: string): string {
+  const base = getApiBaseUrl();
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return base ? `${base}${cleanPath}` : cleanPath;
+}
+
 export interface StreamChatParams {
   messages: Message[];
   modelId?: string;
@@ -141,7 +174,7 @@ export async function streamChatMessage({
     enableWebSearch,
   };
 
-  const response = await fetch("/api/chat/stream", {
+  const response = await fetch(buildApiUrl("/api/chat/stream"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -257,7 +290,7 @@ export async function streamTaskOrchestration({
     })),
   };
 
-  const response = await fetch("/api/orchestrator/stream", {
+  const response = await fetch(buildApiUrl("/api/orchestrator/stream"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -379,7 +412,7 @@ export async function streamTaskOrchestration({
 
 export async function fetchAvailableModels(): Promise<AIModel[]> {
   try {
-    const res = await fetch("/api/models");
+    const res = await fetch(buildApiUrl("/api/models"));
     if (!res.ok) throw new Error("Failed to fetch models");
     const data = await res.json();
     return data.models;
@@ -392,7 +425,7 @@ export async function fetchAvailableModels(): Promise<AIModel[]> {
 
 export async function generateChatTitle(prompt: string): Promise<string> {
   try {
-    const res = await fetch("/api/chat/title", {
+    const res = await fetch(buildApiUrl("/api/chat/title"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt }),
@@ -406,7 +439,7 @@ export async function generateChatTitle(prompt: string): Promise<string> {
 }
 
 export async function verifyLogin(name: string, email: string) {
-  const res = await fetch("/api/auth/demo-login", {
+  const res = await fetch(buildApiUrl("/api/auth/demo-login"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email }),
@@ -426,7 +459,7 @@ export async function checkServerHealth(): Promise<{
   ollamaModelCount?: number;
 }> {
   try {
-    const res = await fetch("/api/health");
+    const res = await fetch(buildApiUrl("/api/health"));
     if (!res.ok) throw new Error("Health check failed");
     return await res.json();
   } catch {
@@ -441,7 +474,7 @@ export async function checkServerHealth(): Promise<{
 
 export async function fetchProviderPoolStatus(): Promise<ProviderPoolStatus | null> {
   try {
-    const res = await fetch("/api/providers/status");
+    const res = await fetch(buildApiUrl("/api/providers/status"));
     if (!res.ok) throw new Error("Failed to fetch providers status");
     return await res.json();
   } catch (err) {
@@ -452,7 +485,7 @@ export async function fetchProviderPoolStatus(): Promise<ProviderPoolStatus | nu
 
 export async function fetchOllamaStatus(): Promise<any> {
   try {
-    const res = await fetch("/api/ollama/status");
+    const res = await fetch(buildApiUrl("/api/ollama/status"));
     if (!res.ok) throw new Error("Failed to fetch ollama status");
     return await res.json();
   } catch (err) {
@@ -460,9 +493,23 @@ export async function fetchOllamaStatus(): Promise<any> {
   }
 }
 
+export async function updateOllamaConfigApi(baseUrl: string): Promise<any> {
+  try {
+    const res = await fetch(buildApiUrl("/api/ollama/config"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ baseUrl }),
+    });
+    if (!res.ok) throw new Error("Failed to update Ollama config");
+    return await res.json();
+  } catch (err: any) {
+    return { isConnected: false, models: [], error: err.message || "Failed to connect to Ollama" };
+  }
+}
+
 export async function fetchRegisteredAgents(): Promise<AgentRegistryItem[]> {
   try {
-    const res = await fetch("/api/registry/agents");
+    const res = await fetch(buildApiUrl("/api/registry/agents"));
     if (!res.ok) throw new Error("Failed to fetch agents");
     const data = await res.json();
     return data.agents || [];
@@ -474,7 +521,7 @@ export async function fetchRegisteredAgents(): Promise<AgentRegistryItem[]> {
 
 export async function fetchRegisteredTools(): Promise<ToolRegistryItem[]> {
   try {
-    const res = await fetch("/api/registry/tools");
+    const res = await fetch(buildApiUrl("/api/registry/tools"));
     if (!res.ok) throw new Error("Failed to fetch tools");
     const data = await res.json();
     return data.tools || [];
@@ -486,7 +533,7 @@ export async function fetchRegisteredTools(): Promise<ToolRegistryItem[]> {
 
 export async function fetchRegistryHealth(): Promise<RegistryHealthReport | null> {
   try {
-    const res = await fetch("/api/registry/health");
+    const res = await fetch(buildApiUrl("/api/registry/health"));
     if (!res.ok) throw new Error("Failed to fetch registry health");
     return await res.json();
   } catch (err) {
@@ -500,7 +547,7 @@ export async function updateAgentStatusApi(
   status: "active" | "degraded" | "inactive" | "maintenance"
 ): Promise<boolean> {
   try {
-    const res = await fetch(`/api/registry/agents/${encodeURIComponent(agentId)}/status`, {
+    const res = await fetch(buildApiUrl(`/api/registry/agents/${encodeURIComponent(agentId)}/status`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -514,7 +561,7 @@ export async function updateAgentStatusApi(
 
 export async function runRegistryTestsApi(): Promise<RegistryTestReport | null> {
   try {
-    const res = await fetch("/api/registry/run-tests", {
+    const res = await fetch(buildApiUrl("/api/registry/run-tests"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
     });
@@ -558,7 +605,7 @@ export async function fetchMemoriesApi(params?: {
     }
     if (params?.limit) searchParams.append("limit", String(params.limit));
 
-    const res = await fetch(`/api/memory?${searchParams.toString()}`);
+    const res = await fetch(buildApiUrl(`/api/memory?${searchParams.toString()}`));
     if (!res.ok) throw new Error("Failed to fetch memories");
     const data = await res.json();
     return data.memories || [];
@@ -573,7 +620,7 @@ export async function fetchMemoryStatsApi(): Promise<{
   health: { status: string; sanitizerWorking: boolean; latencyMs: number };
 } | null> {
   try {
-    const res = await fetch("/api/memory/stats");
+    const res = await fetch(buildApiUrl("/api/memory/stats"));
     if (!res.ok) throw new Error("Failed to fetch memory stats");
     return await res.json();
   } catch (err) {
@@ -593,6 +640,7 @@ export async function createMemoryApi(payload: {
   importance?: number;
   privacy?: string;
   approvalStatus?: string;
+  warnings?: string[];
 }): Promise<{
   success: boolean;
   entry?: MemoryEntry;
@@ -601,7 +649,7 @@ export async function createMemoryApi(payload: {
   error?: string;
 }> {
   try {
-    const res = await fetch("/api/memory", {
+    const res = await fetch(buildApiUrl("/api/memory"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -626,7 +674,7 @@ export async function updateMemoryApi(
   error?: string;
 }> {
   try {
-    const res = await fetch(`/api/memory/${encodeURIComponent(id)}`, {
+    const res = await fetch(buildApiUrl(`/api/memory/${encodeURIComponent(id)}`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
@@ -642,7 +690,7 @@ export async function updateMemoryApi(
 
 export async function deleteMemoryApi(id: string): Promise<boolean> {
   try {
-    const res = await fetch(`/api/memory/${encodeURIComponent(id)}`, {
+    const res = await fetch(buildApiUrl(`/api/memory/${encodeURIComponent(id)}`), {
       method: "DELETE",
     });
     return res.ok;
@@ -654,7 +702,7 @@ export async function deleteMemoryApi(id: string): Promise<boolean> {
 
 export async function approveMemoryApi(id: string): Promise<boolean> {
   try {
-    const res = await fetch(`/api/memory/${encodeURIComponent(id)}/approve`, {
+    const res = await fetch(buildApiUrl(`/api/memory/${encodeURIComponent(id)}/approve`), {
       method: "POST",
     });
     return res.ok;
@@ -666,7 +714,7 @@ export async function approveMemoryApi(id: string): Promise<boolean> {
 
 export async function rejectMemoryApi(id: string): Promise<boolean> {
   try {
-    const res = await fetch(`/api/memory/${encodeURIComponent(id)}/reject`, {
+    const res = await fetch(buildApiUrl(`/api/memory/${encodeURIComponent(id)}/reject`), {
       method: "POST",
     });
     return res.ok;
@@ -682,7 +730,7 @@ export async function simulateContextRetrievalApi(
   maxTokens: number = 1200
 ): Promise<ContextAssembly | null> {
   try {
-    const res = await fetch("/api/memory/retrieve", {
+    const res = await fetch(buildApiUrl("/api/memory/retrieve"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query, projectId, maxTokens }),
@@ -697,7 +745,7 @@ export async function simulateContextRetrievalApi(
 
 export async function runMemoryTestsApi(): Promise<MemoryTestReport | null> {
   try {
-    const res = await fetch("/api/memory/run-tests", {
+    const res = await fetch(buildApiUrl("/api/memory/run-tests"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
     });
@@ -742,7 +790,7 @@ export async function streamMissionMode({
     })),
   };
 
-  const response = await fetch("/api/mission/stream", {
+  const response = await fetch(buildApiUrl("/api/mission/stream"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -817,7 +865,7 @@ export async function sendMissionControlAction(
   extra: { taskId?: string; approvalId?: string; decisionReason?: string } = {}
 ): Promise<{ success: boolean; mission?: MissionState; error?: string }> {
   try {
-    const res = await fetch(`/api/mission/${encodeURIComponent(missionId)}/control`, {
+    const res = await fetch(buildApiUrl(`/api/mission/${encodeURIComponent(missionId)}/control`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, ...extra }),
@@ -835,7 +883,7 @@ export async function sendMissionControlAction(
 
 export async function runMissionTestsApi(): Promise<MissionTestReport | null> {
   try {
-    const res = await fetch("/api/mission/run-tests", {
+    const res = await fetch(buildApiUrl("/api/mission/run-tests"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
     });

@@ -152,6 +152,20 @@ app.get("/api/ollama/status", async (req: Request, res: Response) => {
   }
 });
 
+// 1d. Ollama dynamic config endpoint (Update Base URL from UI)
+app.post("/api/ollama/config", async (req: Request, res: Response) => {
+  try {
+    const { baseUrl } = req.body;
+    if (baseUrl && typeof baseUrl === "string" && baseUrl.trim()) {
+      ollamaProvider.setBaseUrl(baseUrl.trim());
+    }
+    const status = await ollamaProvider.getStatus();
+    res.json(status);
+  } catch (err: any) {
+    res.status(500).json({ error: extractCleanErrorMessage(err) });
+  }
+});
+
 // 2. Models list endpoint (merges Gemini + Ollama models dynamically)
 app.get("/api/models", async (req: Request, res: Response) => {
   try {
@@ -299,28 +313,45 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
       const role = msg.role === "assistant" ? "model" : "user";
       const parts: any[] = [];
 
-      // If this message has attachments (e.g. images or document text)
+      // Process all multimodal attachments (images, PDFs, text, code)
       if (msg.attachments && Array.isArray(msg.attachments)) {
         for (const att of msg.attachments) {
-          if (att.data && att.mimeType) {
-            if (att.mimeType.startsWith("image/")) {
+          const mime = att.mimeType || "";
+          
+          if (att.data) {
+            const cleanBase64 = att.data.replace(/^data:[^;]+;base64,/, "");
+            if (mime.startsWith("image/") || mime === "application/pdf") {
               parts.push({
                 inlineData: {
-                  mimeType: att.mimeType,
-                  data: att.data.replace(/^data:[^;]+;base64,/, ""),
+                  mimeType: mime || "image/png",
+                  data: cleanBase64,
                 },
               });
-            } else if (att.textContent) {
-              parts.push({
-                text: `[Attached File: ${att.name || "document"}]\n\`\`\`\n${att.textContent}\n\`\`\``,
-              });
+            } else if (!att.textContent) {
+              // Try decoding base64 text
+              try {
+                const decoded = Buffer.from(cleanBase64, "base64").toString("utf-8");
+                parts.push({
+                  text: `[Attached File: ${att.name || "document"}]\n\`\`\`\n${decoded.slice(0, 50000)}\n\`\`\``,
+                });
+              } catch {}
             }
+          }
+
+          if (att.textContent && att.textContent.trim()) {
+            parts.push({
+              text: `[Attached File: ${att.name || "document"}]\n\`\`\`\n${att.textContent.slice(0, 50000)}\n\`\`\``,
+            });
           }
         }
       }
 
-      if (msg.content && msg.content.trim()) {
-        parts.push({ text: msg.content });
+      // Add user message text, or provide a default prompt if only files were sent
+      const textContent = msg.content ? msg.content.trim() : "";
+      if (textContent) {
+        parts.push({ text: textContent });
+      } else if (parts.length > 0 && role === "user") {
+        parts.push({ text: "Please thoroughly analyze and respond to the attached file(s)." });
       }
 
       if (parts.length > 0) {

@@ -4,12 +4,16 @@ import {
   Check,
   Database,
   Download,
+  Globe,
   HardDrive,
   Info,
   Layers,
+  Link2,
   Moon,
+  Radio,
   RotateCcw,
   Sliders,
+  Smartphone,
   Sparkles,
   Sun,
   Trash2,
@@ -19,7 +23,13 @@ import {
   X,
 } from "lucide-react";
 import { AIModel, AppSettings, Conversation, Persona, ProviderPoolStatus } from "../types";
-import { checkServerHealth, fetchProviderPoolStatus } from "../services/api";
+import {
+  checkServerHealth,
+  fetchProviderPoolStatus,
+  getCustomBackendUrl,
+  setCustomBackendUrl,
+  updateOllamaConfigApi,
+} from "../services/api";
 import { getStorageUsage } from "../services/storage";
 
 interface SettingsModalProps {
@@ -61,6 +71,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [clearConfirm, setClearConfirm] = useState(false);
   const [importSuccess, setImportSuccess] = useState(false);
 
+  // Remote Backend / Mobile App Sync State
+  const [backendUrl, setBackendUrl] = useState(getCustomBackendUrl());
+  const [backendSaveSuccess, setBackendSaveSuccess] = useState(false);
+  const [isTestingBackend, setIsTestingBackend] = useState(false);
+
+  // Ollama Custom URL State
+  const [ollamaUrl, setOllamaUrl] = useState("http://127.0.0.1:11434");
+  const [isUpdatingOllama, setIsUpdatingOllama] = useState(false);
+  const [ollamaFeedback, setOllamaFeedback] = useState<string | null>(null);
+
   const loadProviderHealth = async () => {
     setIsLoadingProviders(true);
     try {
@@ -70,10 +90,46 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       ]);
       setServerHealth(health);
       setProviderStatus(pStatus);
+      if (pStatus?.ollama?.baseUrl) {
+        setOllamaUrl(pStatus.ollama.baseUrl);
+      }
     } catch (e) {
       console.error(e);
     } finally {
       setIsLoadingProviders(false);
+    }
+  };
+
+  const handleSaveBackendUrl = async () => {
+    setIsTestingBackend(true);
+    setCustomBackendUrl(backendUrl);
+    try {
+      const health = await checkServerHealth();
+      setServerHealth(health);
+      setBackendSaveSuccess(true);
+      setTimeout(() => setBackendSaveSuccess(false), 3000);
+    } catch {
+      setBackendSaveSuccess(true);
+    } finally {
+      setIsTestingBackend(false);
+    }
+  };
+
+  const handleSaveOllamaUrl = async () => {
+    setIsUpdatingOllama(true);
+    setOllamaFeedback(null);
+    try {
+      const res = await updateOllamaConfigApi(ollamaUrl);
+      if (res.isConnected) {
+        setOllamaFeedback(`Connected! Found ${res.models?.length || 0} local model(s).`);
+      } else {
+        setOllamaFeedback(`Could not connect: ${res.error || "Ensure Ollama is running"}`);
+      }
+      loadProviderHealth();
+    } catch (err: any) {
+      setOllamaFeedback(`Error: ${err.message || "Failed to test connection"}`);
+    } finally {
+      setIsUpdatingOllama(false);
     }
   };
 
@@ -531,8 +587,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {/* Refresh / Status Bar */}
               <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
                 <div>
-                  <p className="font-semibold text-slate-900 dark:text-white">AI Provider Infrastructure</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Multi-Key Gemini Pool + Ollama Local Engine</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">AI Provider & App Sync</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Multi-Key Gemini Pool, Ollama Local Engine & Live Mobile Sync</p>
                 </div>
                 <button
                   onClick={loadProviderHealth}
@@ -542,6 +598,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <RotateCcw className={`w-3.5 h-3.5 ${isLoadingProviders ? "animate-spin text-emerald-500" : ""}`} />
                   <span>Refresh Status</span>
                 </button>
+              </div>
+
+              {/* SECTION 0: Mobile App Live Cloud Sync */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500/5 to-transparent border border-blue-500/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-blue-500" />
+                    <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                      Mobile App & Live Remote Sync
+                    </span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                    {backendUrl ? "Custom Cloud Server" : "Local / Same-Origin"}
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Connect your downloaded Android APK to your live backend server (e.g. Render, Railway, or VPS). Any updates pushed to GitHub will instantly reflect on the phone app without reinstalling!
+                </p>
+
+                <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                  <input
+                    type="url"
+                    value={backendUrl}
+                    onChange={(e) => setBackendUrl(e.target.value)}
+                    placeholder="https://your-shawezgpt.onrender.com (or empty for default)"
+                    className="flex-1 w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={handleSaveBackendUrl}
+                    disabled={isTestingBackend}
+                    className="w-full sm:w-auto px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold whitespace-nowrap transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    {isTestingBackend ? (
+                      <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                    ) : backendSaveSuccess ? (
+                      <Check className="w-3.5 h-3.5 text-white" />
+                    ) : (
+                      <Link2 className="w-3.5 h-3.5" />
+                    )}
+                    <span>{backendSaveSuccess ? "Saved & Connected!" : "Save & Sync App"}</span>
+                  </button>
+                </div>
               </div>
 
               {/* SECTION 1: Gemini 3-Key Pool */}
@@ -623,15 +722,44 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   >
                     {providerStatus?.ollama.isConnected || serverHealth?.ollamaConnected
                       ? "Connected (Local Engine)"
-                      : "Offline (Run 'ollama serve')"}
+                      : "Offline"}
                   </span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1">
-                  <span className="text-slate-500 dark:text-slate-400">Ollama API Endpoint:</span>
-                  <span className="font-mono text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
-                    {providerStatus?.ollama.baseUrl || "http://127.0.0.1:11434"}
-                  </span>
+                <div className="space-y-2">
+                  <div className="flex flex-col sm:flex-row items-center gap-2">
+                    <input
+                      type="url"
+                      value={ollamaUrl}
+                      onChange={(e) => setOllamaUrl(e.target.value)}
+                      placeholder="http://127.0.0.1:11434 (or custom host)"
+                      className="flex-1 w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button
+                      onClick={handleSaveOllamaUrl}
+                      disabled={isUpdatingOllama}
+                      className="w-full sm:w-auto px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold whitespace-nowrap transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      {isUpdatingOllama ? (
+                        <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Radio className="w-3.5 h-3.5" />
+                      )}
+                      <span>Test / Connect</span>
+                    </button>
+                  </div>
+
+                  {ollamaFeedback && (
+                    <div
+                      className={`p-2.5 rounded-xl text-xs ${
+                        ollamaFeedback.includes("Connected")
+                          ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20"
+                          : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                      }`}
+                    >
+                      {ollamaFeedback}
+                    </div>
+                  )}
                 </div>
 
                 {providerStatus?.ollama.models && providerStatus.ollama.models.length > 0 ? (
@@ -651,15 +779,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Run <code className="font-mono text-indigo-400">ollama run llama3</code> or <code className="font-mono text-indigo-400">ollama run mistral</code> to enable local zero-quota intelligence in ShawezGPT.
-                  </p>
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+                    <p className="font-semibold text-slate-800 dark:text-slate-200">How to activate Ollama locally:</p>
+                    <ol className="list-decimal list-inside space-y-0.5 text-slate-500">
+                      <li>Download and install from <a href="https://ollama.com" target="_blank" rel="noreferrer" className="text-indigo-500 underline">ollama.com</a></li>
+                      <li>In terminal, run: <code className="font-mono bg-slate-200 dark:bg-slate-700 px-1 rounded text-indigo-400">ollama run llama3</code> or <code className="font-mono bg-slate-200 dark:bg-slate-700 px-1 rounded text-indigo-400">ollama run mistral</code></li>
+                      <li>Click <strong>Test / Connect</strong> above to start chatting with zero quota limits!</li>
+                    </ol>
+                  </div>
                 )}
               </div>
 
               {/* Overview footer */}
               <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                🛡️ <strong>Zero Quota Disruption Guarantee</strong>: With 3 Gemini keys auto-rotating and Ollama serving as a local standby engine, your users will experience seamless, uninterrupted uptime without ever encountering API quota exhaustion limits.
+                🛡️ <strong>Zero Quota Disruption Guarantee</strong>: With 3 Gemini keys auto-rotating and Ollama serving as a standby engine, your users experience 100% seamless, uninterrupted uptime without quota limits.
               </div>
             </div>
           )}
