@@ -65,6 +65,28 @@ export class GeminiKeyPool {
       }
     }
 
+    // 3. Check GEMINI.TXT or gemini.txt or keys.txt file in project root
+    try {
+      const fs = require("fs");
+      const path = require("path");
+      const txtCandidates = ["GEMINI.TXT", "gemini.txt", "keys.txt", "API.TXT", "api.txt"];
+      for (const fname of txtCandidates) {
+        const fullPath = path.resolve(process.cwd(), fname);
+        if (fs.existsSync(fullPath)) {
+          const content = fs.readFileSync(fullPath, "utf-8");
+          const lines = content
+            .split(/[\r\n,]+/)
+            .map((k: string) => k.trim())
+            .filter((k: string) => k.length > 10 && !k.startsWith("#") && !k.startsWith("MY_GEMINI") && !k.startsWith("//"));
+          for (const key of lines) {
+            if (!rawKeys.includes(key)) {
+              rawKeys.push(key);
+            }
+          }
+        }
+      }
+    } catch {}
+
     this.keys = rawKeys;
 
     // Initialize clients and telemetry for each key
