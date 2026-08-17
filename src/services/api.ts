@@ -175,6 +175,21 @@ export async function streamChatMessage({
     enableWebSearch,
   };
 
+  // If no custom remote backend URL is set, run standalone direct Gemini engine immediately
+  const customBackend = getCustomBackendUrl();
+  if (!customBackend) {
+    return await streamDirectGemini({
+      messages,
+      modelId,
+      systemInstruction,
+      temperature,
+      enableWebSearch,
+      onChunk,
+      onGrounding,
+      signal,
+    });
+  }
+
   try {
     const response = await fetch(buildApiUrl("/api/chat/stream"), {
       method: "POST",
@@ -186,27 +201,17 @@ export async function streamChatMessage({
     });
 
     if (!response.ok) {
-      // If server returned 404/500/offline and no custom backend is set, fallback to direct client-side Gemini
-      if (!getCustomBackendUrl() || response.status === 404 || response.status === 502 || response.status === 503) {
-        console.warn("[API] Server responded with error, falling back to direct client-side Gemini engine...");
-        return await streamDirectGemini({
-          messages,
-          modelId,
-          systemInstruction,
-          temperature,
-          enableWebSearch,
-          onChunk,
-          onGrounding,
-          signal,
-        });
-      }
-
-      let errBody: any = null;
-      try {
-        errBody = await response.json();
-      } catch {}
-      const message = cleanErrorMessage(errBody?.message || errBody?.error || `Request failed with status ${response.status}`);
-      throw new Error(message);
+      console.warn("[API] Custom backend server error, falling back to direct Gemini engine...");
+      return await streamDirectGemini({
+        messages,
+        modelId,
+        systemInstruction,
+        temperature,
+        enableWebSearch,
+        onChunk,
+        onGrounding,
+        signal,
+      });
     }
 
     if (!response.body) {

@@ -186,24 +186,48 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               )}
 
               {message.error ? (
-                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 text-rose-700 dark:text-rose-300 flex items-start gap-2.5 text-xs sm:text-sm">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-semibold">Generation Notice</p>
-                    <p>{message.error}</p>
+                <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/50 text-rose-700 dark:text-rose-300 flex items-start justify-between gap-3 text-xs sm:text-sm">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold">Generation Notice</p>
+                      <p>{message.error}</p>
+                    </div>
                   </div>
+                  {onRegenerate && (
+                    <button
+                      onClick={onRegenerate}
+                      className="px-2.5 py-1 rounded-lg bg-rose-100 dark:bg-rose-900/50 hover:bg-rose-200 text-rose-800 dark:text-rose-200 text-xs font-semibold whitespace-nowrap flex items-center gap-1 transition-colors"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Retry</span>
+                    </button>
+                  )}
                 </div>
               ) : isUser ? (
                 <p className="whitespace-pre-wrap">{message.content}</p>
               ) : (
-                message.content && (
-                  <div className="relative">
-                    <MarkdownRenderer content={message.content} />
-                    {message.isStreaming && (
-                      <span className="inline-block w-2 h-4 ml-1 bg-emerald-500 animate-pulse align-middle" />
-                    )}
-                  </div>
-                )
+                <div className="relative">
+                  {message.isStreaming && !message.content && (
+                    <div className="flex items-center gap-1.5 py-1 text-emerald-600 dark:text-emerald-400">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: "300ms" }} />
+                      <span className="text-xs text-slate-400 dark:text-slate-500 ml-1.5 font-medium animate-pulse">
+                        Thinking...
+                      </span>
+                    </div>
+                  )}
+
+                  {message.content && (
+                    <div className="relative">
+                      <MarkdownRenderer content={message.content} />
+                      {message.isStreaming && (
+                        <span className="inline-block w-2 h-4 ml-1 bg-emerald-500 animate-pulse align-middle" />
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}

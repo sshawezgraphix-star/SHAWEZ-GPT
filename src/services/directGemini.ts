@@ -91,8 +91,8 @@ function formatContents(messages: Message[]) {
 }
 
 /**
- * Direct client-side streaming from Google Gemini API with automatic 3-key pool failover.
- * Allows mobile APK to run 100% standalone anywhere without a backend server!
+ * Direct client-side streaming from Google Gemini API with automatic 3-key pool failover
+ * and seamless fallback to instant non-streaming if webview stream buffers.
  */
 export async function streamDirectGemini({
   messages,
@@ -131,10 +131,12 @@ export async function streamDirectGemini({
 
   for (let attempt = 0; attempt < keys.length; attempt++) {
     const key = keys[(activeKeyIndex + attempt) % keys.length];
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${googleModel}:streamGenerateContent?alt=sse&key=${key}`;
+    const sseEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${googleModel}:streamGenerateContent?alt=sse&key=${key}`;
+    const directEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${googleModel}:generateContent?key=${key}`;
 
     try {
-      const response = await fetch(endpoint, {
+      // Step A: Attempt SSE Streaming
+      const response = await fetch(sseEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -152,74 +154,103 @@ export async function streamDirectGemini({
       }
 
       if (!response.ok) {
+        // If SSE endpoint failed, try non-streaming on same key
         const errJson = await response.json().catch(() => null);
         const errMsg = errJson?.error?.message || `API error ${response.status}`;
-        console.warn(`[DirectGemini] Request failed with key #${((activeKeyIndex + attempt) % keys.length) + 1}: ${errMsg}`);
-        lastError = new Error(errMsg);
-        continue;
-      }
+        console.warn(`[DirectGemini] SSE failed with key #${((activeKeyIndex + attempt) % keys.length) + 1}: ${errMsg}, attempting direct fallback...`);
+      } else if (response.body) {
+        activeKeyIndex = (activeKeyIndex + attempt) % keys.length;
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+        let fullText = "";
+        const sources: GroundingSource[] = [];
 
-      if (!response.body) {
-        throw new Error("No response stream received from Gemini API");
-      }
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-      activeKeyIndex = (activeKeyIndex + attempt) % keys.length;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let buffer = "";
-      let fullText = "";
-      const sources: GroundingSource[] = [];
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data:")) continue;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+            const jsonStr = trimmed.replace(/^data:\s*/, "");
+            if (!jsonStr || jsonStr === "[DONE]") continue;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed.startsWith("data:")) continue;
-
-          const jsonStr = trimmed.replace(/^data:\s*/, "");
-          if (!jsonStr || jsonStr === "[DONE]") continue;
-
-          try {
-            const data = JSON.parse(jsonStr);
-            const candidate = data.candidates?.[0];
-            if (candidate?.content?.parts) {
-              for (const part of candidate.content.parts) {
-                if (part.text) {
-                  fullText += part.text;
-                  onChunk(part.text);
+            try {
+              const data = JSON.parse(jsonStr);
+              const candidate = data.candidates?.[0];
+              if (candidate?.content?.parts) {
+                for (const part of candidate.content.parts) {
+                  if (part.text) {
+                    fullText += part.text;
+                    onChunk(part.text);
+                  }
                 }
               }
-            }
 
-            if (candidate?.groundingMetadata?.groundingChunks) {
-              for (const chunk of candidate.groundingMetadata.groundingChunks) {
-                if (chunk.web?.uri) {
-                  sources.push({
-                    title: chunk.web.title || "Web Source",
-                    url: chunk.web.uri,
-                    snippet: chunk.web.title || "",
-                  });
+              if (candidate?.groundingMetadata?.groundingChunks) {
+                for (const chunk of candidate.groundingMetadata.groundingChunks) {
+                  if (chunk.web?.uri) {
+                    sources.push({
+                      title: chunk.web.title || "Web Source",
+                      url: chunk.web.uri,
+                      snippet: chunk.web.title || "",
+                    });
+                  }
+                }
+                if (onGrounding && sources.length > 0) {
+                  onGrounding(sources);
                 }
               }
-              if (onGrounding && sources.length > 0) {
-                onGrounding(sources);
-              }
+            } catch {
+              // Ignore partial chunk parse errors
             }
-          } catch (parseErr) {
-            // Ignore partial parse chunks
           }
+        }
+
+        if (fullText.trim().length > 0) {
+          return { fullText, sources };
         }
       }
 
-      if (fullText.trim().length > 0) {
-        return { fullText, sources };
+      // Step B: Non-streaming fallback if SSE returned empty or reader not supported
+      console.log(`[DirectGemini] Calling direct generateContent fallback with key #${((activeKeyIndex + attempt) % keys.length) + 1}...`);
+      const directRes = await fetch(directEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+        signal,
+      });
+
+      if (directRes.ok) {
+        activeKeyIndex = (activeKeyIndex + attempt) % keys.length;
+        const data = await directRes.json();
+        const candidate = data.candidates?.[0];
+        const text = candidate?.content?.parts?.[0]?.text || "";
+        const sources: GroundingSource[] = [];
+
+        if (candidate?.groundingMetadata?.groundingChunks) {
+          for (const chunk of candidate.groundingMetadata.groundingChunks) {
+            if (chunk.web?.uri) {
+              sources.push({
+                title: chunk.web.title || "Web Source",
+                url: chunk.web.uri,
+                snippet: chunk.web.title || "",
+              });
+            }
+          }
+        }
+
+        if (text) {
+          onChunk(text);
+          if (sources.length > 0) onGrounding?.(sources);
+          return { fullText: text, sources };
+        }
       }
     } catch (fetchErr: any) {
       if (fetchErr.name === "AbortError") {
