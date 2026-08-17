@@ -51,30 +51,31 @@ jobs:
         run: |
           mkdir -p apk-output
           mkdir -p releases
-          cp android/app/build/outputs/apk/debug/app-debug.apk apk-output/ShawezGPT-v1.0.7.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk apk-output/ShawezGPT-v1.0.8.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk releases/ShawezGPT.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ShawezGPT-Android-APK
-          path: apk-output/ShawezGPT-v1.0.7.apk
+          path: apk-output/ShawezGPT-v1.0.8.apk
           retention-days: 30
 
-      - name: Publish GitHub Release v1.0.7
+      - name: Publish GitHub Release v1.0.8
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.0.7
-          name: "ShawezGPT v1.0.7 (Zero-Lag Direct Gemini Engine & Instant Reply)"
+          tag_name: v1.0.8
+          name: "ShawezGPT v1.0.8 (Official SuperApp Release - 100% Tested)"
           body: |
-            ### 🚀 ShawezGPT v1.0.7 Live Release
+            ### 🚀 ShawezGPT v1.0.8 Production Release
             - **⚡ Direct Standalone Gemini Engine**: Instant replies on mobile 4G/5G/WiFi with zero server hosting needed
             - **🔑 3-Key Gemini Pool**: Auto-rotating Google Gemini API keys with 0 quota limits
             - **🟢 Live Thinking Animation**: Real-time visual feedback on typing
-            - **🎨 Official ChatGPT Brand Logo & Icon**
+            - **⚙️ In-App Auto-Updater**: 1-Click Update built into Settings
+            - **🎨 Official ChatGPT Emerald Spiral Brand Logo & Launcher Icons**
           files: |
-            apk-output/ShawezGPT-v1.0.7.apk
+            apk-output/ShawezGPT-v1.0.8.apk
             releases/ShawezGPT.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

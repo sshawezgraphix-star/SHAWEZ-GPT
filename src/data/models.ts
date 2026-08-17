@@ -2,8 +2,8 @@ import { AIModel, OrchestratorCapabilityInfo, Persona } from "../types";
 
 export const DEFAULT_MODELS: AIModel[] = [
   {
-    id: "gemini-3.7-flash",
-    name: "Shawez Turbo 3.7",
+    id: "gemini-2.5-flash",
+    name: "Shawez Turbo 2.5",
     description: "Our flagship multimodal model for blazing speed, complex reasoning, and expert multi-task orchestration.",
     contextWindow: "1M tokens",
     badge: "Orchestrator Pro",
@@ -12,7 +12,7 @@ export const DEFAULT_MODELS: AIModel[] = [
     supportsVision: true,
   },
   {
-    id: "gemini-3.1-pro-preview",
+    id: "gemini-2.5-pro",
     name: "Shawez Deep Pro",
     description: "Deep analytical reasoning model designed for high-level algorithms, STEM, multi-stage planning, and research.",
     contextWindow: "2M tokens",
@@ -22,7 +22,7 @@ export const DEFAULT_MODELS: AIModel[] = [
     supportsVision: true,
   },
   {
-    id: "gemini-3.1-flash-lite",
+    id: "gemini-2.5-flash-lite",
     name: "Shawez Ultra Lite",
     description: "Ultra-low latency model engineered for instantaneous responses and lightweight tasks.",
     contextWindow: "1M tokens",
