@@ -18,6 +18,7 @@ import {
   ProviderPoolStatus,
 } from "../types";
 import { generateProfessionalPDF } from "./pdfGenerator";
+import { streamDirectGemini } from "./directGemini";
 
 export function getApiBaseUrl(): string {
   if (typeof window !== "undefined") {
@@ -174,35 +175,49 @@ export async function streamChatMessage({
     enableWebSearch,
   };
 
-  const response = await fetch(buildApiUrl("/api/chat/stream"), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-    signal,
-  });
+  try {
+    const response = await fetch(buildApiUrl("/api/chat/stream"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      signal,
+    });
 
-  if (!response.ok) {
-    let errBody: any = null;
-    try {
-      errBody = await response.json();
-    } catch {
-      // Not JSON
+    if (!response.ok) {
+      // If server returned 404/500/offline and no custom backend is set, fallback to direct client-side Gemini
+      if (!getCustomBackendUrl() || response.status === 404 || response.status === 502 || response.status === 503) {
+        console.warn("[API] Server responded with error, falling back to direct client-side Gemini engine...");
+        return await streamDirectGemini({
+          messages,
+          modelId,
+          systemInstruction,
+          temperature,
+          enableWebSearch,
+          onChunk,
+          onGrounding,
+          signal,
+        });
+      }
+
+      let errBody: any = null;
+      try {
+        errBody = await response.json();
+      } catch {}
+      const message = cleanErrorMessage(errBody?.message || errBody?.error || `Request failed with status ${response.status}`);
+      throw new Error(message);
     }
-    const message = cleanErrorMessage(errBody?.message || errBody?.error || `Request failed with status ${response.status}`);
-    throw new Error(message);
-  }
 
-  if (!response.body) {
-    throw new Error("No readable stream received from server.");
-  }
+    if (!response.body) {
+      throw new Error("No readable stream received from server.");
+    }
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder("utf-8");
-  let buffer = "";
-  let fullText = "";
-  let sources: GroundingSource[] = [];
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+    let fullText = "";
+    let sources: GroundingSource[] = [];
 
   try {
     while (true) {
@@ -252,14 +267,30 @@ export async function streamChatMessage({
       }
     }
 
-    return { fullText, sources };
-  } catch (err: any) {
-    if (signal?.aborted) {
       return { fullText, sources };
+    } catch (streamErr: any) {
+      if (signal?.aborted) {
+        return { fullText, sources };
+      }
+      throw streamErr;
+    } finally {
+      reader.releaseLock();
     }
-    throw err;
-  } finally {
-    reader.releaseLock();
+  } catch (outerErr: any) {
+    if (signal?.aborted) {
+      return { fullText: "", sources: [] };
+    }
+    console.warn("[API] Backend server unavailable or threw error, using direct client-side Gemini fallback:", outerErr?.message);
+    return await streamDirectGemini({
+      messages,
+      modelId,
+      systemInstruction,
+      temperature,
+      enableWebSearch,
+      onChunk,
+      onGrounding,
+      signal,
+    });
   }
 }
 

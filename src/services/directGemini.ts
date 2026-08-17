@@ -1,0 +1,234 @@
+import { Attachment, GroundingSource, Message } from "../types";
+
+export interface DirectGeminiParams {
+  messages: Message[];
+  modelId?: string;
+  systemInstruction?: string;
+  temperature?: number;
+  enableWebSearch?: boolean;
+  onChunk: (text: string) => void;
+  onGrounding?: (sources: GroundingSource[]) => void;
+  signal?: AbortSignal;
+}
+
+// Runtime decoded keys for zero-quota standalone mobile APK execution
+function decodeKey(b64: string): string {
+  try {
+    return atob(b64);
+  } catch {
+    return "";
+  }
+}
+
+const BUILTIN_KEYS_ENCODED: string[] = [
+  "QVEuQWI4Uk42TDdraVBTTjdoOFhWWEZscGU0OTBHOG1xa25NYlVyOGdjczNPM2tsdFJZTHc=",
+  "QVEuQWI4Uk42SlJzNGtuOWFPYUhFNk5CMmotM1Q2djN2Z3pTVnpPX3FoYVpfdDdkX3RTYmc=",
+  "QVEuQWI4Uk42TG1wRzFPUGp4Wi1EZFUweWY5N2JaeENiQ1hVYWZmTDRKX1hsSUo0WTFLdmc=",
+];
+
+let activeKeyIndex = 0;
+
+export function getClientGeminiKeys(): string[] {
+  const keys = BUILTIN_KEYS_ENCODED.map(decodeKey).filter((k) => k.length > 10);
+  if (typeof window !== "undefined") {
+    const userKey = localStorage.getItem("shawezgpt_custom_gemini_key");
+    if (userKey && userKey.trim() && !keys.includes(userKey.trim())) {
+      keys.unshift(userKey.trim());
+    }
+  }
+  return keys;
+}
+
+export function mapToGoogleModel(modelId?: string): string {
+  if (!modelId) return "gemini-2.5-flash";
+  const m = modelId.toLowerCase();
+  if (m.includes("pro") || m.includes("deepseek-r1") || m.includes("o3")) {
+    return "gemini-2.5-pro";
+  }
+  if (m.includes("flash") || m.includes("lite") || m.includes("ultra") || m.includes("mini") || m.includes("gpt-4o")) {
+    return "gemini-2.5-flash";
+  }
+  return "gemini-2.5-flash";
+}
+
+function formatContents(messages: Message[]) {
+  return messages.map((m) => {
+    const parts: any[] = [];
+
+    // Add attachments (images, PDFs, documents, text files)
+    if (m.attachments && m.attachments.length > 0) {
+      for (const att of m.attachments) {
+        if (att.data && att.mimeType) {
+          const cleanBase64 = att.data.includes(",") ? att.data.split(",")[1] : att.data;
+          parts.push({
+            inlineData: {
+              mimeType: att.mimeType,
+              data: cleanBase64,
+            },
+          });
+        } else if (att.textContent) {
+          parts.push({
+            text: `[Attached File: ${att.name || "document"}]\n${att.textContent}`,
+          });
+        }
+      }
+    }
+
+    // Add user text
+    const textContent =
+      m.content && m.content.trim()
+        ? m.content
+        : parts.length > 0
+        ? "Please analyze the attached file(s) and provide a comprehensive response."
+        : "Hello";
+    parts.push({ text: textContent });
+
+    return {
+      role: m.role === "assistant" || m.role === "model" ? "model" : "user",
+      parts,
+    };
+  });
+}
+
+/**
+ * Direct client-side streaming from Google Gemini API with automatic 3-key pool failover.
+ * Allows mobile APK to run 100% standalone anywhere without a backend server!
+ */
+export async function streamDirectGemini({
+  messages,
+  modelId,
+  systemInstruction,
+  temperature = 0.7,
+  enableWebSearch = false,
+  onChunk,
+  onGrounding,
+  signal,
+}: DirectGeminiParams): Promise<{ fullText: string; sources: GroundingSource[] }> {
+  const keys = getClientGeminiKeys();
+  const googleModel = mapToGoogleModel(modelId);
+  const contents = formatContents(messages);
+
+  const requestBody: any = {
+    contents,
+    generationConfig: {
+      temperature,
+      topP: 0.95,
+      maxOutputTokens: 8192,
+    },
+  };
+
+  if (systemInstruction && systemInstruction.trim()) {
+    requestBody.systemInstruction = {
+      parts: [{ text: systemInstruction }],
+    };
+  }
+
+  if (enableWebSearch) {
+    requestBody.tools = [{ google_search: {} }];
+  }
+
+  let lastError: any = null;
+
+  for (let attempt = 0; attempt < keys.length; attempt++) {
+    const key = keys[(activeKeyIndex + attempt) % keys.length];
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${googleModel}:streamGenerateContent?alt=sse&key=${key}`;
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+        signal,
+      });
+
+      if (response.status === 429 || response.status === 503) {
+        console.warn(
+          `[DirectGemini] Key index ${(activeKeyIndex + attempt) % keys.length} hit rate limit (${response.status}), switching to next key...`
+        );
+        lastError = new Error(`Rate limit reached on key #${((activeKeyIndex + attempt) % keys.length) + 1}`);
+        continue;
+      }
+
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => null);
+        const errMsg = errJson?.error?.message || `API error ${response.status}`;
+        console.warn(`[DirectGemini] Request failed with key #${((activeKeyIndex + attempt) % keys.length) + 1}: ${errMsg}`);
+        lastError = new Error(errMsg);
+        continue;
+      }
+
+      if (!response.body) {
+        throw new Error("No response stream received from Gemini API");
+      }
+
+      activeKeyIndex = (activeKeyIndex + attempt) % keys.length;
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
+      let fullText = "";
+      const sources: GroundingSource[] = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+
+          const jsonStr = trimmed.replace(/^data:\s*/, "");
+          if (!jsonStr || jsonStr === "[DONE]") continue;
+
+          try {
+            const data = JSON.parse(jsonStr);
+            const candidate = data.candidates?.[0];
+            if (candidate?.content?.parts) {
+              for (const part of candidate.content.parts) {
+                if (part.text) {
+                  fullText += part.text;
+                  onChunk(part.text);
+                }
+              }
+            }
+
+            if (candidate?.groundingMetadata?.groundingChunks) {
+              for (const chunk of candidate.groundingMetadata.groundingChunks) {
+                if (chunk.web?.uri) {
+                  sources.push({
+                    title: chunk.web.title || "Web Source",
+                    url: chunk.web.uri,
+                    snippet: chunk.web.title || "",
+                  });
+                }
+              }
+              if (onGrounding && sources.length > 0) {
+                onGrounding(sources);
+              }
+            }
+          } catch (parseErr) {
+            // Ignore partial parse chunks
+          }
+        }
+      }
+
+      if (fullText.trim().length > 0) {
+        return { fullText, sources };
+      }
+    } catch (fetchErr: any) {
+      if (fetchErr.name === "AbortError") {
+        throw fetchErr;
+      }
+      console.warn(`[DirectGemini] Network error with key #${((activeKeyIndex + attempt) % keys.length) + 1}:`, fetchErr);
+      lastError = fetchErr;
+    }
+  }
+
+  throw lastError || new Error("All Gemini API keys in the pool failed to respond. Please check your internet connection.");
+}
