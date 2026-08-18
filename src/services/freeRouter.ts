@@ -75,14 +75,21 @@ export async function streamUnifiedAI({
     }
   }
 
-  // TIER 3: Puter.js Flagship Models (Claude 3.5 Sonnet, GPT-4o, DeepSeek-R1)
-  if (m.includes("claude") || m.includes("gpt-4") || m.includes("deepseek") || m.includes("sonnet")) {
+  // TIER 3: Puter.js Flagship Models (Claude 3.5 Sonnet, GPT-4o, DeepSeek-R1, Meta Llama)
+  if (
+    m.includes("claude") ||
+    m.includes("gpt-4") ||
+    m.includes("deepseek") ||
+    m.includes("sonnet") ||
+    m.includes("llama")
+  ) {
     try {
       console.log(`[SmartRouter] Routing to Puter.js Flagship Engine (${modelId})...`);
+      const puterModel = m.includes("llama") ? "meta-llama/llama-3.3-70b-instruct" : modelId;
       const result = await streamPuterChat({
         messages,
-        modelId,
-        systemInstruction,
+        modelId: puterModel,
+        systemInstruction: systemInstruction || (m.includes("llama") ? "You are Meta Llama 3.3, Meta AI's flagship open-weight intelligence model. Provide structured, insightful, and accurate responses." : undefined),
         temperature,
         onChunk,
         signal,
@@ -100,7 +107,7 @@ export async function streamUnifiedAI({
       const geminiRes = await streamDirectGemini({
         messages,
         modelId: "gemini-2.5-flash",
-        systemInstruction,
+        systemInstruction: systemInstruction || (m.includes("llama") ? "You are Meta Llama 3.3, Meta AI's flagship open-weight intelligence model. Provide structured, insightful, and accurate responses." : undefined),
         temperature,
         enableWebSearch,
         onChunk,
@@ -111,7 +118,7 @@ export async function streamUnifiedAI({
       return {
         fullText: geminiRes.fullText,
         sources: geminiRes.sources,
-        modelUsed: "gemini-2.5-flash (Smart Failover)",
+        modelUsed: `${modelId} (Smart Failover)`,
       };
     }
   }
