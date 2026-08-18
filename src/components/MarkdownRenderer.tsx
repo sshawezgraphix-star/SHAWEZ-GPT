@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Check, Copy, ExternalLink, Maximize2 } from "lucide-react";
+import { Check, Copy, ExternalLink, Maximize2, Play, Sparkles } from "lucide-react";
 import { CodeBlockModal } from "./CodeBlockModal";
 
 interface MarkdownRendererProps {
@@ -172,6 +172,18 @@ const CodeBlockWrapper: React.FC<CodeBlockWrapperProps> = ({
     }
   };
 
+  const isRunnable =
+    language === "html" ||
+    language === "xml" ||
+    language === "svg" ||
+    language === "javascript" ||
+    language === "js" ||
+    language === "jsx" ||
+    code.includes("<!DOCTYPE html>") ||
+    code.includes("<html") ||
+    code.includes("<div") ||
+    code.includes("<svg");
+
   return (
     <div className="my-3.5 rounded-xl overflow-hidden border border-slate-800 bg-slate-950 shadow-md group">
       {/* Header bar */}
@@ -180,8 +192,23 @@ const CodeBlockWrapper: React.FC<CodeBlockWrapperProps> = ({
           <span className="uppercase font-semibold text-emerald-400">
             {language || "code"}
           </span>
+          {isRunnable && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-sans font-medium">
+              Interactive WebApp
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
+          {isRunnable && (
+            <button
+              onClick={onExpand}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-sans text-xs font-bold shadow-sm transition-all"
+              title="Run Live Sandbox Widget"
+            >
+              <Play className="w-3 h-3 fill-current" />
+              <span>Run Live App</span>
+            </button>
+          )}
           <button
             onClick={onExpand}
             className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
