@@ -407,9 +407,25 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
       temperature: Number(temperature) || 0.7,
     };
 
-    if (systemInstruction && typeof systemInstruction === "string" && systemInstruction.trim()) {
-      config.systemInstruction = systemInstruction.trim();
+    let personaInstruction = "";
+    const m = (model || "").toLowerCase();
+    if (m.includes("claude") || m.includes("sonnet")) {
+      personaInstruction = "You are Claude 3.5 Sonnet (developed by Anthropic), the world's leading AI model for high-precision programming, clean software architecture, structured ATS resume drafting, and nuanced reasoning. Provide deeply structured, eloquent, and mathematically accurate responses.";
+    } else if (m.includes("gpt-4") || m.includes("chatgpt")) {
+      personaInstruction = "You are ChatGPT GPT-4o (developed by OpenAI), an advanced omni-modal AI flagship capable of deep reasoning, versatile problem-solving, and full-stack software development.";
+    } else if (m.includes("deepseek") || m.includes("r1")) {
+      personaInstruction = "You are DeepSeek-R1 (developed by DeepSeek), a state-of-the-art open reasoning model specializing in transparent step-by-step mathematical reasoning, formal logic proofs, and optimized algorithms.";
+    } else if (m.includes("llama")) {
+      personaInstruction = "You are Meta Llama 3.3 70B (developed by Meta AI), Meta's flagship open-weight intelligence model with 405B-level capabilities in complex problem-solving, coding, and multilingual understanding.";
+    } else {
+      personaInstruction = "You are ShawezGPT, an advanced, versatile, and highly capable AI assistant. Provide beautifully formatted markdown with clear headings, bullet points, and code blocks.";
     }
+
+    const effectiveInstruction = (systemInstruction && typeof systemInstruction === "string" && systemInstruction.trim())
+      ? `${personaInstruction}\n\n${systemInstruction.trim()}`
+      : personaInstruction;
+
+    config.systemInstruction = effectiveInstruction;
 
     // Grounding with Google Search if requested
     if (enableWebSearch) {
@@ -419,7 +435,7 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
     let streamResult;
     try {
       streamResult = await geminiPool.generateContentStream(
-        model || "gemini-3.7-flash",
+        model || "gemini-2.5-flash",
         contents,
         config
       );

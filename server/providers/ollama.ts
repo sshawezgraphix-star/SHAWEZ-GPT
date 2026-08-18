@@ -99,16 +99,22 @@ export class OllamaProvider {
    */
   public static isOllamaModelId(modelId: string): boolean {
     if (!modelId) return false;
-    return (
-      modelId.startsWith("ollama:") ||
-      modelId.startsWith("ollama/") ||
-      modelId.includes("llama") ||
-      modelId.includes("mistral") ||
-      modelId.includes("qwen") ||
-      modelId.includes("deepseek") ||
-      modelId.includes("phi") ||
-      modelId.includes("gemma")
-    );
+    const lower = modelId.toLowerCase();
+    // Cloud models should not be routed to Ollama
+    if (
+      lower.startsWith("gemini") ||
+      lower.startsWith("claude") ||
+      lower.startsWith("gpt") ||
+      lower === "llama-3.3-70b" ||
+      lower === "llama-3.2-vision" ||
+      lower === "deepseek-r1"
+    ) {
+      return false;
+    }
+    if (lower.startsWith("ollama:") || lower.startsWith("ollama/")) return true;
+    if (lower.includes(":")) return true;
+    if (lower === "mistral" || lower === "llama3" || lower === "qwen" || lower === "phi3" || lower === "codellama") return true;
+    return false;
   }
 
   public static cleanModelName(modelId: string): string {

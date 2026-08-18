@@ -283,16 +283,7 @@ export class GeminiKeyPool {
       throw new Error("No Gemini API Keys configured. Please set GEMINI_API_KEY, GEMINI_API_KEY_2, or GEMINI_API_KEY_3 in .env");
     }
 
-    const fallbackList: string[] = [];
-    if (requestedModel === "gemini-3.7-flash") {
-      fallbackList.push("gemini-2.5-flash", "gemini-3.1-flash-lite");
-    } else if (requestedModel === "gemini-3.1-pro-preview") {
-      fallbackList.push("gemini-2.5-pro", "gemini-3.7-flash");
-    } else if (requestedModel === "gemini-3.1-flash-lite") {
-      fallbackList.push("gemini-2.5-flash");
-    }
-
-    const modelsToTry = [requestedModel, ...fallbackList];
+    const modelsToTry = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"];
     const keyCandidates = this.getKeyCandidates();
     let lastError: any = null;
 
@@ -379,9 +370,11 @@ export class GeminiKeyPool {
       tele.totalRequests++;
       this.currentIndex = tele.index;
 
+      const targetModel = (requestedModel.includes("pro") || requestedModel.includes("deep")) ? "gemini-2.5-pro" : "gemini-2.5-flash";
+
       try {
         const response = await client.models.generateContent({
-          model: requestedModel,
+          model: targetModel,
           contents,
           config,
         });

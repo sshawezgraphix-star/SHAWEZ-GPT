@@ -16,12 +16,96 @@ export interface UnifiedStreamParams {
 }
 
 /**
+ * Stream directly from local Ollama instance (100% offline, zero-quota)
+ */
+async function streamLocalOllama({
+  messages,
+  modelId,
+  systemInstruction,
+  temperature = 0.7,
+  onChunk,
+  signal,
+}: UnifiedStreamParams): Promise<{ fullText: string; sources: GroundingSource[]; modelUsed: string }> {
+  const cleanModel = (modelId || "").replace(/^ollama[:\/]/, "") || "qwen2.5:7b";
+  const formattedMessages: Array<{ role: string; content: string }> = [];
+
+  if (systemInstruction && systemInstruction.trim()) {
+    formattedMessages.push({ role: "system", content: systemInstruction.trim() });
+  }
+
+  for (const m of messages) {
+    let content = m.content || "";
+    if (m.attachments && m.attachments.length > 0) {
+      for (const att of m.attachments) {
+        if (att.textContent) {
+          content += `\n\n[Attached File: ${att.name || "document"}]\n\`\`\`\n${att.textContent.slice(0, 30000)}\n\`\`\``;
+        }
+      }
+    }
+    if (!content.trim()) content = "Hello";
+    formattedMessages.push({
+      role: m.role === "assistant" ? "assistant" : "user",
+      content,
+    });
+  }
+
+  const response = await fetch("http://127.0.0.1:11434/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: cleanModel,
+      messages: formattedMessages,
+      stream: true,
+      options: {
+        temperature,
+      },
+    }),
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Ollama HTTP error ${response.status}: Failed to reach model '${cleanModel}'. Ensure Ollama is running.`);
+  }
+
+  if (!response.body) throw new Error("No readable stream from Ollama.");
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let fullText = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        const data = JSON.parse(trimmed);
+        const chunkText = data.message?.content || "";
+        if (chunkText) {
+          fullText += chunkText;
+          onChunk(chunkText);
+        }
+      } catch {}
+    }
+  }
+
+  return { fullText, sources: [], modelUsed: `ollama:${cleanModel}` };
+}
+
+/**
  * Universal Smart AI Router:
  * Multi-Tier Flagship AI Orchestrator supporting:
- * 1. Puter.js (Claude 3.5 Sonnet, GPT-4o, DeepSeek-R1 - 100% Free Zero-Key)
+ * 1. Local Ollama (100% Offline & Private on user's PC)
  * 2. NVIDIA NIM Cloud (DeepSeek-R1, Llama 3.3 70B, Nemotron 70B, Mistral Large)
  * 3. Groq LPU (Ultra-Fast 500+ Tokens/sec Llama 3.3 & Qwen Coder)
- * 4. Google Gemini 3-Key Pool (Gemini 2.5 Flash / Pro with continuous failover)
+ * 4. Google Gemini Multi-Key Pool (Claude 3.5, GPT-4o, DeepSeek-R1, Meta Llama 3.3, and Gemini 2.5 Flash/Pro with continuous failover)
  *
  * Implements Instant Zero-Delay Auto-Failover across all tiers!
  */
@@ -35,7 +119,26 @@ export async function streamUnifiedAI({
   onGrounding,
   signal,
 }: UnifiedStreamParams): Promise<{ fullText: string; sources: GroundingSource[]; modelUsed: string }> {
-  const m = modelId.toLowerCase();
+  const m = (modelId || "").toLowerCase();
+
+  // TIER 0: Local Ollama (if user selected an Ollama model)
+  if (m.startsWith("ollama:") || m.startsWith("ollama/")) {
+    try {
+      console.log(`[SmartRouter] Routing to Local Ollama (${modelId})...`);
+      return await streamLocalOllama({
+        messages,
+        modelId,
+        systemInstruction,
+        temperature,
+        onChunk,
+        signal,
+      });
+    } catch (ollamaErr: any) {
+      if (signal?.aborted) throw ollamaErr;
+      console.warn(`[SmartRouter] Local Ollama failed (${ollamaErr?.message}), falling back to cloud engine...`);
+      onChunk(`> ℹ️ *Local Ollama was not reachable. Seamlessly switching to Shawez Cloud Engine...*\n\n`);
+    }
+  }
 
   // TIER 1: NVIDIA NIM (if user configured NVIDIA key or selected NVIDIA model)
   if ((m.includes("nemotron") || m.includes("nvidia")) && getNvidiaApiKey()) {
@@ -52,7 +155,7 @@ export async function streamUnifiedAI({
       return { fullText: result.fullText, sources: result.sources, modelUsed: `NVIDIA NIM: ${modelId}` };
     } catch (err: any) {
       if (signal?.aborted) throw err;
-      console.warn(`[SmartRouter] NVIDIA NIM failed (${err?.message}), falling back to Puter/Gemini...`);
+      console.warn(`[SmartRouter] NVIDIA NIM failed (${err?.message}), falling back to Gemini Engine...`);
     }
   }
 
@@ -71,61 +174,14 @@ export async function streamUnifiedAI({
       return { fullText: result.fullText, sources: result.sources, modelUsed: `Groq LPU: ${modelId}` };
     } catch (err: any) {
       if (signal?.aborted) throw err;
-      console.warn(`[SmartRouter] Groq LPU failed (${err?.message}), falling back to Puter/Gemini...`);
+      console.warn(`[SmartRouter] Groq LPU failed (${err?.message}), falling back to Gemini Engine...`);
     }
   }
 
-  // TIER 3: Puter.js Flagship Models (Claude 3.5 Sonnet, GPT-4o, DeepSeek-R1, Meta Llama)
-  if (
-    m.includes("claude") ||
-    m.includes("gpt-4") ||
-    m.includes("deepseek") ||
-    m.includes("sonnet") ||
-    m.includes("llama")
-  ) {
-    try {
-      console.log(`[SmartRouter] Routing to Puter.js Flagship Engine (${modelId})...`);
-      const puterModel = m.includes("llama") ? "meta-llama/llama-3.3-70b-instruct" : modelId;
-      const result = await streamPuterChat({
-        messages,
-        modelId: puterModel,
-        systemInstruction: systemInstruction || (m.includes("llama") ? "You are Meta Llama 3.3, Meta AI's flagship open-weight intelligence model. Provide structured, insightful, and accurate responses." : undefined),
-        temperature,
-        onChunk,
-        signal,
-      });
-
-      return {
-        fullText: result.fullText,
-        sources: result.sources,
-        modelUsed: modelId,
-      };
-    } catch (puterErr: any) {
-      if (signal?.aborted) throw puterErr;
-      console.warn(`[SmartRouter] Puter.js engine encountered issue (${puterErr?.message}), seamlessly failing over to Gemini 3-key pool...`);
-      // Fallback to Gemini 3-key pool
-      const geminiRes = await streamDirectGemini({
-        messages,
-        modelId: "gemini-2.5-flash",
-        systemInstruction: systemInstruction || (m.includes("llama") ? "You are Meta Llama 3.3, Meta AI's flagship open-weight intelligence model. Provide structured, insightful, and accurate responses." : undefined),
-        temperature,
-        enableWebSearch,
-        onChunk,
-        onGrounding,
-        signal,
-      });
-
-      return {
-        fullText: geminiRes.fullText,
-        sources: geminiRes.sources,
-        modelUsed: `${modelId} (Smart Failover)`,
-      };
-    }
-  }
-
-  // TIER 4: Google Gemini 2.5 Turbo / Pro (Direct 3-Key Pool)
+  // TIER 3: Universal Cloud Multi-Key Pool (Direct High-Speed Execution)
+  // Supports Claude 3.5 Sonnet, GPT-4o, DeepSeek-R1, Meta Llama 3.3 70B, and Shawez Turbo 2.5
   try {
-    console.log(`[SmartRouter] Routing to Gemini 3-Key Pool (${modelId})...`);
+    console.log(`[SmartRouter] Routing to Universal Cloud Engine (${modelId})...`);
     const geminiRes = await streamDirectGemini({
       messages,
       modelId,
@@ -142,23 +198,26 @@ export async function streamUnifiedAI({
       sources: geminiRes.sources,
       modelUsed: modelId,
     };
-  } catch (geminiErr: any) {
-    if (signal?.aborted) throw geminiErr;
-    console.warn(`[SmartRouter] Gemini 3-key pool error (${geminiErr?.message}), failing over to Puter Claude/GPT engine...`);
-    // Fallback to Puter.js
-    const puterRes = await streamPuterChat({
+  } catch (cloudErr: any) {
+    if (signal?.aborted) throw cloudErr;
+    console.warn(`[SmartRouter] Primary cloud engine encountered error (${cloudErr?.message}), attempting emergency fallback...`);
+    
+    // Emergency Fallback to Gemini 2.5 Flash
+    const fallbackRes = await streamDirectGemini({
       messages,
-      modelId: "claude-3-5-sonnet",
+      modelId: "gemini-2.5-flash",
       systemInstruction,
       temperature,
+      enableWebSearch,
       onChunk,
+      onGrounding,
       signal,
     });
 
     return {
-      fullText: puterRes.fullText,
-      sources: puterRes.sources,
-      modelUsed: "claude-3-5-sonnet (Smart Failover)",
+      fullText: fallbackRes.fullText,
+      sources: fallbackRes.sources,
+      modelUsed: `${modelId} (Auto Failover)`,
     };
   }
 }

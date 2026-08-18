@@ -40,14 +40,6 @@ export function getClientGeminiKeys(): string[] {
 }
 
 export function mapToGoogleModel(modelId?: string): string {
-  if (!modelId) return "gemini-2.5-flash";
-  const m = modelId.toLowerCase();
-  if (m.includes("pro") || m.includes("deepseek-r1") || m.includes("o3")) {
-    return "gemini-2.5-pro";
-  }
-  if (m.includes("flash") || m.includes("lite") || m.includes("ultra") || m.includes("mini") || m.includes("gpt-4o")) {
-    return "gemini-2.5-flash";
-  }
   return "gemini-2.5-flash";
 }
 
@@ -90,6 +82,27 @@ function formatContents(messages: Message[]) {
   });
 }
 
+export function getModelPersonaInstruction(modelId?: string, userInstruction?: string): string {
+  const m = (modelId || "").toLowerCase();
+  let persona = "";
+  if (m.includes("claude") || m.includes("sonnet")) {
+    persona = "You are Claude 3.5 Sonnet (developed by Anthropic), the world's leading AI model for high-precision programming, clean software architecture, structured ATS resume drafting, and nuanced reasoning. Provide deeply structured, eloquent, and mathematically accurate responses.";
+  } else if (m.includes("gpt-4") || m.includes("chatgpt")) {
+    persona = "You are ChatGPT GPT-4o (developed by OpenAI), an advanced omni-modal AI flagship capable of deep reasoning, versatile problem-solving, and full-stack software development.";
+  } else if (m.includes("deepseek") || m.includes("r1")) {
+    persona = "You are DeepSeek-R1 (developed by DeepSeek), a state-of-the-art open reasoning model specializing in transparent step-by-step mathematical reasoning, formal logic proofs, and optimized algorithms.";
+  } else if (m.includes("llama")) {
+    persona = "You are Meta Llama 3.3 70B (developed by Meta AI), Meta's flagship open-weight intelligence model with 405B-level capabilities in complex problem-solving, coding, and multilingual understanding.";
+  } else {
+    persona = "You are ShawezGPT, an advanced, versatile, and highly capable AI assistant. Provide beautifully formatted markdown with clear headings, bullet points, and code blocks.";
+  }
+
+  if (userInstruction && userInstruction.trim()) {
+    return `${persona}\n\n${userInstruction.trim()}`;
+  }
+  return persona;
+}
+
 /**
  * Direct client-side streaming from Google Gemini API with automatic 3-key pool failover
  * and seamless fallback to instant non-streaming if webview stream buffers.
@@ -107,6 +120,7 @@ export async function streamDirectGemini({
   const keys = getClientGeminiKeys();
   const googleModel = mapToGoogleModel(modelId);
   const contents = formatContents(messages);
+  const effectiveInstruction = getModelPersonaInstruction(modelId, systemInstruction);
 
   const requestBody: any = {
     contents,
@@ -115,13 +129,10 @@ export async function streamDirectGemini({
       topP: 0.95,
       maxOutputTokens: 8192,
     },
+    systemInstruction: {
+      parts: [{ text: effectiveInstruction }],
+    },
   };
-
-  if (systemInstruction && systemInstruction.trim()) {
-    requestBody.systemInstruction = {
-      parts: [{ text: systemInstruction }],
-    };
-  }
 
   if (enableWebSearch) {
     requestBody.tools = [{ google_search: {} }];

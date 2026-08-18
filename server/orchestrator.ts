@@ -147,9 +147,11 @@ Respond ONLY with valid JSON in this exact structure:
   ]
 }`;
 
+  const targetModel = "gemini-2.5-flash";
+
   try {
     const response = await ai.models.generateContent({
-      model,
+      model: targetModel,
       contents: prompt,
       config: {
         temperature: 0.2,
@@ -388,9 +390,11 @@ Please formulate an elegant, comprehensive, and publication-ready final response
 3. If a PDF report was requested and created, clearly state that the PDF document has been compiled and is ready for download in the attached artifact card below.
 4. Keep the tone sharp, authoritative, helpful, and concise.`;
 
+  const targetModel = "gemini-2.5-flash";
+
   try {
     const response = await ai.models.generateContent({
-      model,
+      model: targetModel,
       contents: prompt,
       config: {
         temperature: 0.4,
