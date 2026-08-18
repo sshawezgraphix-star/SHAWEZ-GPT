@@ -178,6 +178,26 @@ export async function streamUnifiedAI({
     }
   }
 
+  // TIER 2.5: OpenRouter Free Models Gateway (DeepSeek R1, Meta Llama 3.3, Qwen Coder)
+  if (m.includes("openrouter") || m.includes(":free")) {
+    try {
+      const { streamOpenRouter } = await import("./openrouterProvider");
+      console.log(`[SmartRouter] Routing to OpenRouter Free Gateway (${modelId})...`);
+      const result = await streamOpenRouter({
+        messages,
+        modelId,
+        systemInstruction,
+        temperature,
+        onChunk,
+        signal,
+      });
+      return { fullText: result.fullText, sources: result.sources, modelUsed: `OpenRouter: ${modelId}` };
+    } catch (err: any) {
+      if (signal?.aborted) throw err;
+      console.warn(`[SmartRouter] OpenRouter Free Gateway failed (${err?.message}), falling back to Gemini Engine...`);
+    }
+  }
+
   // TIER 3: Universal Cloud Multi-Key Pool (Direct High-Speed Execution)
   // Supports Claude 3.5 Sonnet, GPT-4o, DeepSeek-R1, Meta Llama 3.3 70B, and Shawez Turbo 2.5
   try {
