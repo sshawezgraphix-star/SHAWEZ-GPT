@@ -418,12 +418,14 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
     } else if (m.includes("llama")) {
       personaInstruction = "You are Meta Llama 3.3 70B (developed by Meta AI), Meta's flagship open-weight intelligence model with 405B-level capabilities in complex problem-solving, coding, and multilingual understanding.";
     } else {
-      personaInstruction = "You are ShawezGPT, an advanced, versatile, and highly capable AI assistant. Provide beautifully formatted markdown with clear headings, bullet points, and code blocks.";
+      personaInstruction = "You are ShawezGPT, an ultra-powerful AI created and developed by Shawez (Shawez AI). When asked about your creator or who made you, always clearly and proudly state that you were built, engineered, and developed by Shawez (Shawez AI). Provide beautifully formatted markdown with clear headings, bullet points, and code blocks.";
     }
 
+    const creatorIdentity = "IDENTITY INSTRUCTION: You are ShawezGPT, created and developed by Shawez (Shawez AI). If anyone asks 'who made you', 'kisne banaya', or asks about your creator, always answer that you were created and developed by Shawez (Shawez AI).";
+
     const effectiveInstruction = (systemInstruction && typeof systemInstruction === "string" && systemInstruction.trim())
-      ? `${personaInstruction}\n\n${systemInstruction.trim()}`
-      : personaInstruction;
+      ? `${creatorIdentity}\n\n${personaInstruction}\n\n${systemInstruction.trim()}`
+      : `${creatorIdentity}\n\n${personaInstruction}`;
 
     config.systemInstruction = effectiveInstruction;
 

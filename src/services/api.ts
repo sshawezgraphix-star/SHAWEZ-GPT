@@ -176,21 +176,7 @@ export async function streamChatMessage({
     enableWebSearch,
   };
 
-  // If no custom remote backend URL is set, run standalone direct Unified AI engine immediately
-  const customBackend = getCustomBackendUrl();
-  if (!customBackend) {
-    return await streamUnifiedAI({
-      messages,
-      modelId,
-      systemInstruction,
-      temperature,
-      enableWebSearch,
-      onChunk,
-      onGrounding,
-      signal,
-    });
-  }
-
+  // Attempt Backend Server Stream First
   try {
     const response = await fetch(buildApiUrl("/api/chat/stream"), {
       method: "POST",
@@ -201,103 +187,75 @@ export async function streamChatMessage({
       signal,
     });
 
-    if (!response.ok) {
-      console.warn("[API] Custom backend server error, falling back to Unified AI engine...");
-      return await streamUnifiedAI({
-        messages,
-        modelId,
-        systemInstruction,
-        temperature,
-        enableWebSearch,
-        onChunk,
-        onGrounding,
-        signal,
-      });
-    }
+    if (response.ok && response.body) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
+      let fullText = "";
+      let sources: GroundingSource[] = [];
 
-    if (!response.body) {
-      throw new Error("No readable stream received from server.");
-    }
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let buffer = "";
-    let fullText = "";
-    let sources: GroundingSource[] = [];
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+        let currentEvent = "message";
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
 
-      let currentEvent = "message";
+          if (line.startsWith("event:")) {
+            currentEvent = line.substring(6).trim();
+          } else if (line.startsWith("data:")) {
+            const rawData = line.substring(5).trim();
+            try {
+              const data = JSON.parse(rawData);
 
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-
-        if (line.startsWith("event:")) {
-          currentEvent = line.substring(6).trim();
-        } else if (line.startsWith("data:")) {
-          const rawData = line.substring(5).trim();
-          try {
-            const data = JSON.parse(rawData);
-
-            if (currentEvent === "chunk") {
-              if (data.text) {
-                fullText += data.text;
-                onChunk(data.text);
+              if (currentEvent === "chunk") {
+                if (data.text) {
+                  fullText += data.text;
+                  onChunk(data.text);
+                }
+              } else if (currentEvent === "grounding") {
+                if (data.sources && Array.isArray(data.sources)) {
+                  sources = data.sources;
+                  onGrounding?.(sources);
+                }
+              } else if (currentEvent === "error") {
+                const cleanMsg = cleanErrorMessage(data.message || "Streaming error");
+                throw new Error(cleanMsg);
               }
-            } else if (currentEvent === "grounding") {
-              if (data.sources && Array.isArray(data.sources)) {
-                sources = data.sources;
-                onGrounding?.(sources);
+            } catch (jsonErr: any) {
+              if (jsonErr.message && !jsonErr.message.includes("JSON")) {
+                throw jsonErr;
               }
-            } else if (currentEvent === "error") {
-              throw new Error(cleanErrorMessage(data.message || "An error occurred while streaming AI response."));
-            } else if (currentEvent === "done") {
-              if (data.sources && Array.isArray(data.sources)) {
-                sources = data.sources;
-              }
-            }
-          } catch (e: any) {
-            if (e.message && e.message.includes("An error occurred")) {
-              throw e;
             }
           }
         }
       }
-    }
 
       return { fullText, sources };
-    } catch (streamErr: any) {
-      if (signal?.aborted) {
-        return { fullText, sources };
-      }
-      throw streamErr;
-    } finally {
-      reader.releaseLock();
     }
-  } catch (outerErr: any) {
-    if (signal?.aborted) {
-      return { fullText: "", sources: [] };
-    }
-    console.warn("[API] Backend server unavailable or threw error, using direct client-side Gemini fallback:", outerErr?.message);
-    return await streamDirectGemini({
-      messages,
-      modelId,
-      systemInstruction,
-      temperature,
-      enableWebSearch,
-      onChunk,
-      onGrounding,
-      signal,
-    });
+  } catch (backendErr: any) {
+    if (signal?.aborted) throw backendErr;
+    console.warn("[API] Backend server unavailable, falling back to standalone Unified AI engine...", backendErr);
   }
+
+  // Standalone Client Fallback (e.g. mobile APK offline)
+  return await streamUnifiedAI({
+    messages,
+    modelId,
+    systemInstruction,
+    temperature,
+    enableWebSearch,
+    onChunk,
+    onGrounding,
+    signal,
+  });
 }
 
 /**
