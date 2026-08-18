@@ -1,4 +1,4 @@
-export const CURRENT_APP_VERSION = "1.0.8";
+export const CURRENT_APP_VERSION = "1.0.9";
 export const REPO_OWNER = "sshawezgraphix-star";
 export const REPO_NAME = "SHAWEZ-GPT";
 export const DIRECT_APK_DOWNLOAD_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/ShawezGPT.apk`;

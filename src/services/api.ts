@@ -19,6 +19,7 @@ import {
 } from "../types";
 import { generateProfessionalPDF } from "./pdfGenerator";
 import { streamDirectGemini } from "./directGemini";
+import { streamUnifiedAI } from "./freeRouter";
 
 export function getApiBaseUrl(): string {
   if (typeof window !== "undefined") {
@@ -175,10 +176,10 @@ export async function streamChatMessage({
     enableWebSearch,
   };
 
-  // If no custom remote backend URL is set, run standalone direct Gemini engine immediately
+  // If no custom remote backend URL is set, run standalone direct Unified AI engine immediately
   const customBackend = getCustomBackendUrl();
   if (!customBackend) {
-    return await streamDirectGemini({
+    return await streamUnifiedAI({
       messages,
       modelId,
       systemInstruction,
@@ -201,8 +202,8 @@ export async function streamChatMessage({
     });
 
     if (!response.ok) {
-      console.warn("[API] Custom backend server error, falling back to direct Gemini engine...");
-      return await streamDirectGemini({
+      console.warn("[API] Custom backend server error, falling back to Unified AI engine...");
+      return await streamUnifiedAI({
         messages,
         modelId,
         systemInstruction,

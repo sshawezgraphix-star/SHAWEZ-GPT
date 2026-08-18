@@ -36,6 +36,7 @@ interface HeaderProps {
   onOpenExport: () => void;
   onOpenRegistry: () => void;
   onOpenMemory: () => void;
+  onOpenResumeStudio?: () => void;
   onClearChat: () => void;
   onNewChat: () => void;
   hasMessages: boolean;
@@ -60,6 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenExport,
   onOpenRegistry,
   onOpenMemory,
+  onOpenResumeStudio,
   onClearChat,
   onNewChat,
   hasMessages,
@@ -230,6 +232,19 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Globe className="w-4 h-4" />
         </button>
+
+        {/* Resume & Document Studio Button */}
+        {onOpenResumeStudio && (
+          <button
+            onClick={onOpenResumeStudio}
+            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+            title="Resume & Document Studio (ATS Resumes, Cover Letters, PDF Generator)"
+            id="btn-header-resume-studio"
+          >
+            <Sparkles className="w-4 h-4 text-emerald-500 shrink-0" />
+            <span className="hidden sm:inline">Resume & PDF Studio</span>
+          </button>
+        )}
 
         {/* Memory & Context Engine Button */}
         <button

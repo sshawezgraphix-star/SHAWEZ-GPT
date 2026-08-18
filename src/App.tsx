@@ -48,6 +48,7 @@ import { WelcomeScreen } from "./components/WelcomeScreen";
 import { MessageItem } from "./components/MessageItem";
 import { InputBar } from "./components/InputBar";
 import { SettingsModal } from "./components/SettingsModal";
+import { ResumeBuilderModal } from "./components/ResumeBuilderModal";
 import { AuthModal } from "./components/AuthModal";
 import { ExportShareModal } from "./components/ExportShareModal";
 import { ArtifactViewerModal } from "./components/orchestrator/ArtifactViewerModal";
@@ -85,6 +86,7 @@ export default function App() {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isRegistryOpen, setIsRegistryOpen] = useState(false);
   const [isMemoryOpen, setIsMemoryOpen] = useState(false);
+  const [isResumeStudioOpen, setIsResumeStudioOpen] = useState(false);
   const [previewArtifact, setPreviewArtifact] = useState<GeneratedArtifact | null>(null);
 
   // Active Model & Persona state
@@ -1208,6 +1210,7 @@ export default function App() {
           onOpenExport={() => setIsExportOpen(true)}
           onOpenRegistry={() => setIsRegistryOpen(true)}
           onOpenMemory={() => setIsMemoryOpen(true)}
+          onOpenResumeStudio={() => setIsResumeStudioOpen(true)}
           onClearChat={handleClearCurrentChat}
           onNewChat={handleNewChat}
           hasMessages={hasMessages}
@@ -1397,6 +1400,13 @@ export default function App() {
       <MemoryManagerModal
         isOpen={isMemoryOpen}
         onClose={() => setIsMemoryOpen(false)}
+      />
+
+      {/* Professional Resume & Document Studio Modal */}
+      <ResumeBuilderModal
+        isOpen={isResumeStudioOpen}
+        onClose={() => setIsResumeStudioOpen(false)}
+        onGenerateResume={(prompt) => handleSendMessage(prompt, [])}
       />
     </div>
   );

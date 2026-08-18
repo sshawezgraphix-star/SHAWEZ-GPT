@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  Download,
   Edit2,
   FileText,
   Globe,
@@ -22,6 +23,7 @@ import { Attachment, GeneratedArtifact, GroundingSource, Message, MissionState }
 import { BrandLogo } from "./BrandLogo";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { SpeechManager } from "../services/speech";
+import { generateAndDownloadPDF } from "../services/pdfGenerator";
 import { TaskOrchestratorView } from "./orchestrator/TaskOrchestratorView";
 import { MissionDashboard } from "./orchestrator/MissionDashboard";
 
@@ -342,6 +344,23 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                     id={`btn-dislike-${message.id}`}
                   >
                     <ThumbsDown className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const firstLine = message.content.trim().split("\n")[0].replace(/^#+\s*/, "") || "ShawezGPT Document";
+                      generateAndDownloadPDF({
+                        title: firstLine,
+                        content: message.content,
+                        theme: "emerald",
+                      });
+                    }}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/60 transition-colors flex items-center gap-1 text-xs"
+                    title="Download as Styled PDF (Resume / Report / Docs)"
+                    id={`btn-pdf-${message.id}`}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span className="text-[11px] font-medium hidden sm:inline">Export PDF</span>
                   </button>
                 </>
               )}
