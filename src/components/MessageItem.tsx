@@ -117,8 +117,19 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 {isUser ? "You" : "ShawezGPT"}
               </span>
               {message.modelUsed && !isUser && (
-                <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  {message.modelUsed}
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  {(() => {
+                    const raw = message.modelUsed.toLowerCase();
+                    if (raw.includes("claude")) return "Claude 3.5 Sonnet";
+                    if (raw.includes("gpt-4") || raw.includes("chatgpt")) return "ChatGPT-4o";
+                    if (raw.includes("deepseek")) return "DeepSeek-R1";
+                    if (raw.includes("llama")) return "Meta Llama 3.3";
+                    if (raw.includes("ollama") || raw.includes("qwen")) return message.modelUsed.replace(/^ollama[:\/]/, "Local: ");
+                    if (raw.includes("gemini")) return "ShawezGPT 4o Turbo";
+                    if (raw.includes("groq")) return "Shawez High-Speed LPU";
+                    if (raw.includes("openrouter")) return "Shawez Free Gateway";
+                    return message.modelUsed;
+                  })()}
                 </span>
               )}
             </div>

@@ -370,7 +370,7 @@ export class GeminiKeyPool {
       tele.totalRequests++;
       this.currentIndex = tele.index;
 
-      const targetModel = (requestedModel.includes("pro") || requestedModel.includes("deep")) ? "gemini-2.5-pro" : "gemini-2.5-flash";
+      const targetModel = "gemini-2.5-flash";
 
       try {
         const response = await client.models.generateContent({
@@ -422,3 +422,5 @@ export function getGeminiKeyPool(): GeminiKeyPool {
   }
   return globalPool;
 }
+
+export const geminiPool = getGeminiKeyPool();

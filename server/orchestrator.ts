@@ -15,6 +15,7 @@ import {
   TaskRoutingResult,
 } from "./registry";
 import { retrieveContextForTask, autoCaptureMemories } from "./memory";
+import { geminiPool } from "./providers/geminiPool";
 
 // Helper: Extract clean text from Gemini responses
 function cleanGeminiText(text?: string): string {
@@ -150,16 +151,16 @@ Respond ONLY with valid JSON in this exact structure:
   const targetModel = "gemini-2.5-flash";
 
   try {
-    const response = await ai.models.generateContent({
-      model: targetModel,
-      contents: prompt,
-      config: {
+    const genResult = await geminiPool.generateContent(
+      targetModel,
+      prompt,
+      {
         temperature: 0.2,
         responseMimeType: "application/json",
-      },
-    });
+      }
+    );
 
-    const text = cleanGeminiText(response.text);
+    const text = cleanGeminiText(genResult.text);
     const parsed = JSON.parse(text);
 
     const subtasks: OrchestratorSubtask[] = (parsed.subtasks || []).map(
@@ -393,15 +394,15 @@ Please formulate an elegant, comprehensive, and publication-ready final response
   const targetModel = "gemini-2.5-flash";
 
   try {
-    const response = await ai.models.generateContent({
-      model: targetModel,
-      contents: prompt,
-      config: {
+    const genResult = await geminiPool.generateContent(
+      targetModel,
+      prompt,
+      {
         temperature: 0.4,
-      },
-    });
+      }
+    );
 
-    return cleanGeminiText(response.text);
+    return cleanGeminiText(genResult.text);
   } catch (error) {
     console.error("Final synthesis fallback:", error);
     return `### Final Deliverable\n\nI have completed all planned subtasks for your request:\n\n${plan.subtasks
