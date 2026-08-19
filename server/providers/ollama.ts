@@ -180,6 +180,7 @@ export class OllamaProvider {
         model: cleanModel,
         messages: ollamaMessages,
         stream: true,
+        keep_alive: "15m",
         options: {
           temperature: options.temperature ?? 0.7,
         },

@@ -49,6 +49,7 @@ import { MessageItem } from "./components/MessageItem";
 import { InputBar } from "./components/InputBar";
 import { SettingsModal } from "./components/SettingsModal";
 import { ResumeBuilderModal } from "./components/ResumeBuilderModal";
+import { ImageStudioModal } from "./components/ImageStudioModal";
 import { AuthModal } from "./components/AuthModal";
 import { ExportShareModal } from "./components/ExportShareModal";
 import { ArtifactViewerModal } from "./components/orchestrator/ArtifactViewerModal";
@@ -87,6 +88,7 @@ export default function App() {
   const [isRegistryOpen, setIsRegistryOpen] = useState(false);
   const [isMemoryOpen, setIsMemoryOpen] = useState(false);
   const [isResumeStudioOpen, setIsResumeStudioOpen] = useState(false);
+  const [isImageStudioOpen, setIsImageStudioOpen] = useState(false);
   const [previewArtifact, setPreviewArtifact] = useState<GeneratedArtifact | null>(null);
 
   // Active Model & Persona state
@@ -1211,6 +1213,7 @@ export default function App() {
           onOpenRegistry={() => setIsRegistryOpen(true)}
           onOpenMemory={() => setIsMemoryOpen(true)}
           onOpenResumeStudio={() => setIsResumeStudioOpen(true)}
+          onOpenImageStudio={() => setIsImageStudioOpen(true)}
           onClearChat={handleClearCurrentChat}
           onNewChat={handleNewChat}
           hasMessages={hasMessages}
@@ -1407,6 +1410,24 @@ export default function App() {
         isOpen={isResumeStudioOpen}
         onClose={() => setIsResumeStudioOpen(false)}
         onGenerateResume={(prompt) => handleSendMessage(prompt, [])}
+      />
+
+      {/* Free AI Image Generation & Editing Studio Modal */}
+      <ImageStudioModal
+        isOpen={isImageStudioOpen}
+        onClose={() => setIsImageStudioOpen(false)}
+        onSendToChat={(dataUrl, promptText) => {
+          handleSendMessage(promptText, [
+            {
+              id: Date.now().toString(),
+              name: "ai_studio_image.png",
+              type: "image",
+              mimeType: "image/png",
+              size: dataUrl.length,
+              data: dataUrl,
+            },
+          ]);
+        }}
       />
     </div>
   );

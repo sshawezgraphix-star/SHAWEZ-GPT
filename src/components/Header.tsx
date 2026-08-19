@@ -7,6 +7,7 @@ import {
   Moon,
   PanelLeft,
   Plus,
+  Image as ImageIcon,
   Settings,
   Share2,
   Sparkles,
@@ -37,6 +38,7 @@ interface HeaderProps {
   onOpenRegistry: () => void;
   onOpenMemory: () => void;
   onOpenResumeStudio?: () => void;
+  onOpenImageStudio?: () => void;
   onClearChat: () => void;
   onNewChat: () => void;
   hasMessages: boolean;
@@ -62,6 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenRegistry,
   onOpenMemory,
   onOpenResumeStudio,
+  onOpenImageStudio,
   onClearChat,
   onNewChat,
   hasMessages,
@@ -243,6 +246,19 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Sparkles className="w-4 h-4 text-emerald-500 shrink-0" />
             <span className="hidden sm:inline">Resume & PDF Studio</span>
+          </button>
+        )}
+
+        {/* AI Image Studio & Editor Button */}
+        {onOpenImageStudio && (
+          <button
+            onClick={onOpenImageStudio}
+            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+            title="AI Image Studio & Editor (100% Free Flux / Canvas Image Editing)"
+            id="btn-header-image-studio"
+          >
+            <ImageIcon className="w-4 h-4 text-pink-500 shrink-0" />
+            <span className="hidden sm:inline">Image Studio</span>
           </button>
         )}
 
