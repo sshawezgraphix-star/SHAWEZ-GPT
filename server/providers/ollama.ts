@@ -1,3 +1,5 @@
+import http from "http";
+
 export interface OllamaModelInfo {
   name: string;
   model: string;
@@ -172,70 +174,90 @@ export class OllamaProvider {
       });
     }
 
-    const response = await fetch(`${this.baseUrl}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: options.signal,
-      body: JSON.stringify({
-        model: cleanModel,
-        messages: ollamaMessages,
-        stream: true,
-        keep_alive: "15m",
-        options: {
-          temperature: options.temperature ?? 0.7,
-        },
-      }),
+    const payload = JSON.stringify({
+      model: cleanModel,
+      messages: ollamaMessages,
+      stream: true,
+      keep_alive: "15m",
+      options: {
+        temperature: options.temperature ?? 0.7,
+      },
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Ollama API error (${response.status}): ${errText || response.statusText}`);
-    }
+    const parsedUrl = new URL(`${this.baseUrl}/api/chat`);
 
-    if (!response.body) {
-      throw new Error("No response body received from Ollama server.");
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let fullText = "";
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
-
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          const parsed = JSON.parse(line);
-          const chunkContent = parsed.message?.content || "";
-          if (chunkContent) {
-            fullText += chunkContent;
-            options.onChunk(chunkContent);
+    return new Promise<{ fullText: string; modelUsed: string }>((resolve, reject) => {
+      const req = http.request(
+        {
+          hostname: parsedUrl.hostname,
+          port: parsedUrl.port || 11434,
+          path: parsedUrl.pathname,
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(payload),
+          },
+        },
+        (res) => {
+          if (res.statusCode && res.statusCode >= 400) {
+            let errBody = "";
+            res.on("data", (chunk) => (errBody += chunk.toString()));
+            res.on("end", () => {
+              reject(new Error(`Ollama API error (${res.statusCode}): ${errBody || res.statusMessage}`));
+            });
+            return;
           }
-        } catch {
-          // ignore non-json fragment
+
+          let fullText = "";
+          let buffer = "";
+
+          res.on("data", (chunk) => {
+            buffer += chunk.toString("utf-8");
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              try {
+                const parsed = JSON.parse(line);
+                const chunkContent = parsed.message?.content || "";
+                if (chunkContent) {
+                  fullText += chunkContent;
+                  options.onChunk(chunkContent);
+                }
+              } catch {}
+            }
+          });
+
+          res.on("end", () => {
+            if (buffer.trim()) {
+              try {
+                const parsed = JSON.parse(buffer);
+                const chunkContent = parsed.message?.content || "";
+                if (chunkContent) {
+                  fullText += chunkContent;
+                  options.onChunk(chunkContent);
+                }
+              } catch {}
+            }
+            resolve({ fullText, modelUsed: `ollama:${cleanModel}` });
+          });
         }
+      );
+
+      if (options.signal) {
+        options.signal.addEventListener("abort", () => {
+          req.destroy(new Error("Aborted by client"));
+        });
       }
-    }
 
-    if (buffer.trim()) {
-      try {
-        const parsed = JSON.parse(buffer);
-        const chunkContent = parsed.message?.content || "";
-        if (chunkContent) {
-          fullText += chunkContent;
-          options.onChunk(chunkContent);
-        }
-      } catch {}
-    }
+      req.on("error", (err) => {
+        reject(err);
+      });
 
-    return { fullText, modelUsed: `ollama:${cleanModel}` };
+      req.write(payload);
+      req.end();
+    });
   }
 
   /**
