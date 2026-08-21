@@ -51,31 +51,34 @@ jobs:
         run: |
           mkdir -p apk-output
           mkdir -p releases
-          cp android/app/build/outputs/apk/debug/app-debug.apk apk-output/ShawezGPT-v1.0.9.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk apk-output/ShawezGPT-v1.1.6.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk apk-output/ShawezGPT-Latest.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk releases/ShawezGPT.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ShawezGPT-Android-APK
-          path: apk-output/ShawezGPT-v1.0.9.apk
+          path: apk-output/ShawezGPT-v1.1.6.apk
           retention-days: 30
 
-      - name: Publish GitHub Release v1.0.9
+      - name: Publish GitHub Release v1.1.6
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.0.9
-          name: "ShawezGPT v1.0.9 (Flagship Multi-Model AI Hub & Resume Studio Edition)"
+          tag_name: v1.1.6
+          name: "ShawezGPT v1.1.6 (Zero-Limit Multi-Swarm & AI Image Studio Edition)"
           body: |
-            ### 🌟 ShawezGPT v1.0.9 SuperApp Flagship Release
-            - **🧠 World's Top Flagship Models**: Claude 3.5 Sonnet, GPT-4o, DeepSeek-R1, and Shawez Gemini Turbo 2.5
-            - **📄 1-Click Resume & CV Studio**: Draft ATS-compliant resumes and export print-ready PDFs
-            - **💻 Live Code Sandbox & Interactive Runner**: Execute HTML, CSS, JavaScript, and UI components in-app
-            - **📑 Direct PDF Document Exporter**: 1-click download of resumes, reports, and code documentation
-            - **⚡ Universal Smart Router**: Zero rate-limit failover across Puter.js and 3-Key Gemini pool
+            ### 🌟 ShawezGPT v1.1.6 SuperApp Android Release
+            - **⚡ 4-Key Zero Rate Limit Engine**: Automatic round-robin load balancing & 0ms failover across 4 Gemini API keys (4,000,000 Tokens/Min).
+            - **🎨 100% Free AI Image Studio**: Flux Pro, Photoreal 8K, Anime, 3D Render, and real-time photo editing suite.
+            - **🧠 World-Class Flagship Models**: Claude 3.5 Sonnet, ChatGPT-4o, DeepSeek-R1, and Meta Llama 3.3.
+            - **🦙 Ollama Zero-Timeout Native Socket Engine**: Instant streaming without connection drops.
+            - **📄 1-Click Resume & PDF Studio**: Draft ATS resumes and compile professional reports on mobile.
+            - **📱 Android APK**: Download `ShawezGPT.apk` or `ShawezGPT-v1.1.6.apk` below and install on Android.
           files: |
-            apk-output/ShawezGPT-v1.0.9.apk
+            apk-output/ShawezGPT-v1.1.6.apk
+            apk-output/ShawezGPT-Latest.apk
             releases/ShawezGPT.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
