@@ -259,10 +259,18 @@ export const STARTER_PROMPTS: StarterPrompt[] = [
   },
   {
     id: "5",
+    title: "Download & Install Mobile App",
+    subtitle: "How to install ShawezGPT APK on Android, Web & PC",
+    prompt: "ShawezGPT app ko Android mobile, Web browser aur PC pe kaise download aur install karein? Step by step guide batao.",
+    iconName: "Smartphone",
+    category: "Installation & Guide",
+  },
+  {
+    id: "6",
     title: "Quick Smart Reasoning",
     subtitle: "Direct answers, coding solutions & general queries",
     prompt: "Explain how modern vector databases indexing algorithms (HNSW, IVFPQ) work under the hood with an intuitive analogy and Python code sample.",
     iconName: "Sparkles",
-    category: "General Intelligence",
+    category: "Quick Intelligence",
   },
 ];

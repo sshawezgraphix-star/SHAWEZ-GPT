@@ -7,6 +7,7 @@ import {
   Globe,
   ImageIcon,
   Lightbulb,
+  Smartphone,
   Sparkles,
   Zap,
 } from "lucide-react";
@@ -32,6 +33,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         return <BrainCircuit className="w-5 h-5 text-cyan-500" />;
       case "Lightbulb":
         return <Lightbulb className="w-5 h-5 text-amber-500" />;
+      case "Smartphone":
+        return <Smartphone className="w-5 h-5 text-emerald-400" />;
       default:
         return <Sparkles className="w-5 h-5 text-emerald-500" />;
     }
