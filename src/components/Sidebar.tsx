@@ -135,17 +135,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside
-        className={`fixed lg:static top-0 bottom-0 left-0 z-40 w-72 sm:w-80 bg-slate-50 dark:bg-slate-950 border-r border-slate-200/80 dark:border-slate-800/80 flex flex-col transition-transform duration-300 ease-in-out select-none ${
+        className={`fixed lg:static top-0 bottom-0 left-0 z-40 w-72 sm:w-80 bg-[#050508] border-r border-white/10 flex flex-col transition-transform duration-300 ease-in-out select-none shadow-[4px_0_24px_rgba(0,0,0,0.8)] ${
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
         id="app-sidebar"
       >
         {/* Top Header & Brand */}
-        <div className="p-4 flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60">
+        <div className="p-4 flex items-center justify-between border-b border-white/10 bg-black/40">
           <BrandLogo size="md" />
           <button
             onClick={onClose}
-            className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800"
+            className="lg:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
             id="btn-close-sidebar-mobile"
           >
             <X className="w-5 h-5" />
@@ -158,31 +158,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="relative">
               <button
                 onClick={() => setProjectDropdownOpen(!projectDropdownOpen)}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-emerald-500/40 transition-colors text-left"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-[#0c0c12] border border-white/10 hover:border-emerald-500/40 transition-all text-left group"
                 id="sidebar-project-selector"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 shrink-0">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0 group-hover:scale-105 transition-transform">
                     <FolderKanban className="w-3.5 h-3.5" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <div className="text-[9px] font-mono font-bold uppercase tracking-wider text-zinc-500">
                       Workspace Project
                     </div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    <div className="text-xs font-bold text-zinc-100 truncate">
                       {activeProject?.name || "Main Workspace"}
                     </div>
                   </div>
                 </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />
+                <ChevronDown className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-300 shrink-0 ml-1 transition-colors" />
               </button>
 
               {projectDropdownOpen && (
                 <div
-                  className="absolute left-0 top-full mt-1.5 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in"
+                  className="absolute left-0 top-full mt-1.5 w-full bg-[#09090d]/95 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in"
                   id="sidebar-project-dropdown"
                 >
-                  <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <div className="px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
                     Switch Workspace Project
                   </div>
                   <div className="max-h-48 overflow-y-auto space-y-1 my-1">
@@ -195,24 +195,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         }}
                         className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs text-left transition-colors ${
                           p.id === activeProjectId
-                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20"
-                            : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            ? "bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30"
+                            : "text-zinc-300 hover:bg-white/5 border border-transparent"
                         }`}
                       >
                         <span className="truncate">{p.name}</span>
-                        <span className="text-[10px] font-mono text-slate-400 ml-1 shrink-0">
+                        <span className="text-[10px] font-mono text-zinc-500 ml-1 shrink-0">
                           {p.conversations?.length || 0} chats
                         </span>
                       </button>
                     ))}
                   </div>
-                  <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800">
+                  <div className="pt-1.5 border-t border-white/10">
                     <button
                       onClick={() => {
                         if (onNavigateToView) onNavigateToView("projects");
                         setProjectDropdownOpen(false);
                       }}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-emerald-400 hover:bg-emerald-500/15 transition-colors"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Manage All Projects</span>
@@ -232,33 +232,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onNewChat();
               if (window.innerWidth < 1024) onClose();
             }}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm shadow-md shadow-emerald-600/20 transition-all group cursor-pointer"
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all group cursor-pointer border border-emerald-400/30"
             id="btn-sidebar-new-chat"
           >
             <div className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               <span>New Chat</span>
             </div>
-            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-emerald-700/60 text-emerald-100 rounded border border-emerald-500/40">
+            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-black/30 text-emerald-200 rounded border border-emerald-400/30">
               ⌘K
             </kbd>
           </button>
 
           {/* Search bar */}
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search chats in project..."
-              className="w-full pl-9 pr-7 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              placeholder="Search conversations..."
+              className="w-full pl-9 pr-7 py-2 rounded-xl bg-[#0a0a0f] border border-white/10 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/30 transition-all"
               id="sidebar-search-input"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -315,7 +315,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {/* Today */}
               {today.length > 0 && (
                 <div>
-                  <div className="px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <div className="px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-zinc-500">
                     Today
                   </div>
                   <div className="space-y-0.5 mt-1">
@@ -349,7 +349,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {/* Yesterday */}
               {yesterday.length > 0 && (
                 <div>
-                  <div className="px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <div className="px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-zinc-500">
                     Yesterday
                   </div>
                   <div className="space-y-0.5 mt-1">
@@ -383,7 +383,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {/* Previous 7 Days */}
               {previous7Days.length > 0 && (
                 <div>
-                  <div className="px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <div className="px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-zinc-500">
                     Previous 7 Days
                   </div>
                   <div className="space-y-0.5 mt-1">
@@ -417,7 +417,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {/* Older */}
               {older.length > 0 && (
                 <div>
-                  <div className="px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <div className="px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-zinc-500">
                     Older
                   </div>
                   <div className="space-y-0.5 mt-1">
@@ -486,33 +486,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {/* Bottom User Profile & Storage */}
-        <div className="p-3 border-t border-slate-200/60 dark:border-slate-800/60 space-y-2">
+        <div className="p-3 border-t border-white/10 bg-black/40 space-y-2">
           {/* Quick Engine Controls */}
           <div className="grid grid-cols-2 gap-1.5">
             {onNavigateToView && (
               <>
                 <button
                   onClick={() => onNavigateToView("missions")}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-semibold transition-colors ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-semibold transition-all ${
                     currentView === "missions"
-                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
-                      : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.2)]"
+                      : "bg-white/5 hover:bg-white/10 text-zinc-300 border-white/10"
                   }`}
                   id="sidebar-btn-missions"
                 >
-                  <Zap className="w-3.5 h-3.5" />
+                  <Zap className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Missions</span>
                 </button>
                 <button
                   onClick={() => onNavigateToView("files")}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-semibold transition-colors ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-semibold transition-all ${
                     currentView === "files"
-                      ? "bg-indigo-500/20 text-indigo-400 border-indigo-500/40"
-                      : "bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-500/20"
+                      ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.2)]"
+                      : "bg-white/5 hover:bg-white/10 text-zinc-300 border-white/10"
                   }`}
                   id="sidebar-btn-files"
                 >
-                  <HardDrive className="w-3.5 h-3.5" />
+                  <HardDrive className="w-3.5 h-3.5 text-cyan-400" />
                   <span>Files</span>
                 </button>
               </>
@@ -520,37 +520,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* Storage mini-meter */}
-          <div className="px-2 py-1 flex items-center justify-between text-[11px] text-slate-400">
+          <div className="px-2 py-1 flex items-center justify-between text-[10px] font-mono text-zinc-500">
             <div className="flex items-center gap-1.5">
-              <HardDrive className="w-3 h-3" />
+              <HardDrive className="w-3 h-3 text-zinc-400" />
               <span>Storage</span>
             </div>
-            <span>{storageUsage.usedKb} KB / 5 MB</span>
+            <span className="text-zinc-400">{storageUsage.usedKb} KB / 5 MB</span>
           </div>
 
           {/* Profile Button */}
           <button
             onClick={onOpenAuth}
-            className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-900 border border-transparent hover:border-slate-200 dark:hover:border-slate-800 transition-colors"
+            className="w-full flex items-center justify-between p-2 rounded-xl bg-[#0c0c12] hover:bg-[#151520] border border-white/10 hover:border-emerald-500/40 transition-all"
             id="sidebar-user-btn"
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <img
                 src={user.avatarUrl}
                 alt={user.name}
-                className="w-8 h-8 rounded-xl object-cover bg-emerald-500/20 shrink-0"
+                className="w-8 h-8 rounded-xl object-cover bg-emerald-500/20 border border-emerald-500/30 shrink-0"
                 referrerPolicy="no-referrer"
               />
               <div className="min-w-0 text-left">
-                <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                <p className="text-xs font-bold text-zinc-100 truncate">
                   {user.name}
                 </p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate font-mono">
-                  {user.plan}
+                <p className="text-[10px] text-emerald-400 font-mono truncate">
+                  {user.plan} · PRO
                 </p>
               </div>
             </div>
-            <Settings className="w-4 h-4 text-slate-400" />
+            <Settings className="w-4 h-4 text-zinc-500 hover:text-zinc-300" />
           </button>
         </div>
       </aside>
@@ -624,18 +624,18 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
       ) : (
         <div
           onClick={onSelect}
-          className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors ${
+          className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium cursor-pointer transition-all ${
             isActive
-              ? "bg-slate-200/80 dark:bg-slate-900 text-slate-900 dark:text-white font-semibold shadow-xs"
-              : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/40 dark:hover:bg-slate-900/50 hover:text-slate-900 dark:hover:text-slate-200"
+              ? "bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 font-bold shadow-[0_0_15px_-3px_rgba(16,185,129,0.2)]"
+              : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200 border border-transparent"
           }`}
           id={`conv-item-${conv.id}`}
         >
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {conv.isPinned ? (
-              <Pin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <Pin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             ) : (
-              <MessageSquare className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <MessageSquare className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
             )}
             <span className="truncate">{conv.title || "Untitled Chat"}</span>
           </div>
@@ -647,7 +647,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
                 e.stopPropagation();
                 setMenuOpen(!isMenuOpen);
               }}
-              className="p-1 rounded-lg hover:bg-slate-300/50 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white"
               id={`conv-menu-btn-${conv.id}`}
             >
               <MoreVertical className="w-3.5 h-3.5" />
@@ -655,7 +655,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
 
             {isMenuOpen && (
               <div
-                className="absolute right-0 top-full mt-1 w-36 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl p-1 z-30 text-xs animate-in fade-in"
+                className="absolute right-0 top-full mt-1 w-36 rounded-xl bg-[#09090d]/95 backdrop-blur-2xl border border-white/15 shadow-2xl p-1 z-30 text-xs animate-in fade-in"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
@@ -663,14 +663,14 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
                     onTogglePin();
                     setMenuOpen(false);
                   }}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-zinc-300 hover:bg-white/10"
                 >
                   {conv.isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
                   <span>{conv.isPinned ? "Unpin" : "Pin"}</span>
                 </button>
                 <button
                   onClick={onStartRename}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-zinc-300 hover:bg-white/10"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                   <span>Rename</span>
@@ -680,18 +680,18 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
                     onExport();
                     setMenuOpen(false);
                   }}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-zinc-300 hover:bg-white/10"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Export</span>
                 </button>
-                <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                <div className="my-1 border-t border-white/10" />
                 <button
                   onClick={() => {
                     onDelete();
                     setMenuOpen(false);
                   }}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-medium"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-rose-400 hover:bg-rose-950/40 font-medium"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Delete</span>

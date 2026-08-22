@@ -48,7 +48,7 @@ export const InputBar: React.FC<InputBarProps> = ({
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      const nextHeight = Math.min(textareaRef.current.scrollHeight, 200);
+      const nextHeight = Math.min(textareaRef.current.scrollHeight, 220);
       textareaRef.current.style.height = `${nextHeight}px`;
     }
   }, [content]);
@@ -206,10 +206,10 @@ export const InputBar: React.FC<InputBarProps> = ({
       id="chat-input-container"
     >
       <div
-        className={`relative rounded-2xl bg-white dark:bg-slate-900 border transition-all shadow-lg shadow-slate-200/50 dark:shadow-slate-950/50 ${
+        className={`relative rounded-2xl bg-[#09090d]/90 backdrop-blur-2xl border transition-all duration-200 shadow-[0_8px_32px_rgba(0,0,0,0.8)] ${
           isDragging
-            ? "border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20 dark:bg-emerald-950/20"
-            : "border-slate-200 dark:border-slate-800 focus-within:border-emerald-500/80 dark:focus-within:border-emerald-500/80 focus-within:ring-2 focus-within:ring-emerald-500/20"
+            ? "border-emerald-400 ring-2 ring-emerald-500/30 bg-emerald-950/20"
+            : "border-white/10 focus-within:border-emerald-500/60 focus-within:shadow-[0_0_30px_-5px_rgba(16,185,129,0.3)] focus-within:ring-1 focus-within:ring-emerald-500/40"
         }`}
       >
         {/* Hidden file input */}
@@ -225,29 +225,29 @@ export const InputBar: React.FC<InputBarProps> = ({
 
         {/* Attachment Previews */}
         {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 p-3 pb-1 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex flex-wrap gap-2 p-3 pb-1 border-b border-white/10">
             {attachments.map((att) => (
               <div
                 key={att.id}
-                className="flex items-center gap-2 p-1.5 pr-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs group"
+                className="flex items-center gap-2 p-1.5 pr-2.5 rounded-xl bg-white/5 border border-white/10 text-xs group hover:border-emerald-500/30 transition-colors"
               >
                 {att.previewUrl ? (
                   <img
                     src={att.previewUrl}
                     alt={att.name}
-                    className="w-8 h-8 rounded-lg object-cover"
+                    className="w-8 h-8 rounded-lg object-cover border border-white/10"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <FileText className="w-5 h-5 text-emerald-500" />
+                  <FileText className="w-5 h-5 text-emerald-400" />
                 )}
-                <span className="max-w-[120px] truncate font-medium text-slate-700 dark:text-slate-300">
+                <span className="max-w-[120px] truncate font-medium text-zinc-200">
                   {att.name}
                 </span>
                 <button
                   type="button"
                   onClick={() => removeAttachment(att.id)}
-                  className="p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-rose-500 transition-colors"
+                  className="p-0.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-rose-400 transition-colors"
                   id={`remove-att-${att.id}`}
                 >
                   <X className="w-3.5 h-3.5" />
@@ -274,20 +274,20 @@ export const InputBar: React.FC<InputBarProps> = ({
             }
             rows={1}
             disabled={disabled}
-            className="w-full bg-transparent resize-none text-sm sm:text-[15px] leading-relaxed text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none max-h-[200px]"
+            className="w-full bg-transparent resize-none text-sm sm:text-[15px] leading-relaxed text-zinc-100 placeholder:text-zinc-500 focus:outline-none max-h-[220px]"
             id="chat-textarea"
           />
         </div>
 
         {/* Bottom Actions Bar */}
-        <div className="flex items-center justify-between px-3 pb-2.5 pt-1 text-slate-500 dark:text-slate-400">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between px-3 pb-2.5 pt-1 text-zinc-400">
+          <div className="flex items-center gap-1.5">
             {/* Attachment Button */}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-              title="Attach images or documents"
+              className="p-2 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-zinc-200 transition-colors border border-transparent hover:border-white/10"
+              title="Attach images, documents or code"
               id="btn-attach-file"
             >
               <Paperclip className="w-4 h-4" />
@@ -297,10 +297,10 @@ export const InputBar: React.FC<InputBarProps> = ({
             <button
               type="button"
               onClick={onToggleWebSearch}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all border ${
                 enableWebSearch
-                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                  : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400"
+                  ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/30 shadow-[0_0_12px_rgba(6,182,212,0.2)]"
+                  : "hover:bg-white/5 text-zinc-400 border-transparent hover:border-white/10"
               }`}
               title={
                 enableWebSearch
@@ -318,12 +318,12 @@ export const InputBar: React.FC<InputBarProps> = ({
               <button
                 type="button"
                 onClick={onToggleOrchestratorMode}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all border ${
                   orchestratorMode === "always"
-                    ? "bg-emerald-600 text-white shadow-sm"
+                    ? "bg-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)] border-emerald-400"
                     : orchestratorMode === "auto"
-                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                    : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500"
+                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                    : "hover:bg-white/5 text-zinc-500 border-transparent hover:border-white/10"
                 }`}
                 title={`Multi-Task Orchestrator: ${
                   orchestratorMode === "always"
@@ -345,10 +345,10 @@ export const InputBar: React.FC<InputBarProps> = ({
             <button
               type="button"
               onClick={toggleRecording}
-              className={`p-2 rounded-xl transition-all ${
+              className={`p-2 rounded-xl transition-all border ${
                 isRecording
-                  ? "bg-rose-500 text-white animate-pulse"
-                  : "hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200"
+                  ? "bg-rose-500 text-white animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.5)] border-rose-400"
+                  : "hover:bg-white/5 text-zinc-400 hover:text-zinc-200 border-transparent hover:border-white/10"
               }`}
               title={isRecording ? "Stop voice recording" : "Dictate with Voice (STT)"}
               id="btn-voice-input"
@@ -358,7 +358,7 @@ export const InputBar: React.FC<InputBarProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-slate-400 hidden md:inline">
+            <span className="text-[10px] font-mono text-zinc-500 hidden md:inline">
               {content.length > 0 ? `${content.length} chars` : ""}
             </span>
 
@@ -367,7 +367,7 @@ export const InputBar: React.FC<InputBarProps> = ({
               <button
                 type="button"
                 onClick={onStopStreaming}
-                className="p-2 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 transition-opacity flex items-center justify-center"
+                className="p-2 rounded-xl bg-white text-black hover:bg-zinc-200 transition-all flex items-center justify-center shadow-lg"
                 title="Stop generating"
                 id="btn-stop-streaming"
               >
@@ -380,8 +380,8 @@ export const InputBar: React.FC<InputBarProps> = ({
                 disabled={!canSubmit || disabled}
                 className={`p-2 rounded-xl transition-all flex items-center justify-center ${
                   canSubmit && !disabled
-                    ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-600/30"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
+                    ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)] cursor-pointer"
+                    : "bg-white/5 text-zinc-600 border border-white/5 cursor-not-allowed"
                 }`}
                 title="Send message (Enter)"
                 id="btn-send-message"
@@ -394,8 +394,8 @@ export const InputBar: React.FC<InputBarProps> = ({
       </div>
 
       <div className="text-center mt-2">
-        <p className="text-[11px] text-slate-600 dark:text-slate-400">
-          ShawezGPT can make mistakes. Check important info.
+        <p className="text-[10px] font-mono text-zinc-500">
+          ShawezGPT Ultra Intelligence · Powered by Shawez AI
         </p>
       </div>
     </div>

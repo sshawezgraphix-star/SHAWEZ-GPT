@@ -89,9 +89,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
   return (
     <div
-      className={`group py-4 px-3 sm:px-6 transition-colors rounded-2xl my-2 ${
+      className={`group py-3.5 px-3.5 sm:px-5 transition-all duration-200 rounded-2xl my-2 ${
         isUser
-          ? "bg-slate-100/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 ml-auto max-w-[92%] sm:max-w-[85%]"
+          ? "bg-[#0d0d14] border border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.8)] ml-auto max-w-[92%] sm:max-w-[85%] hover:border-emerald-500/30"
           : "bg-transparent w-full"
       }`}
       id={`message-${message.id}`}
@@ -100,8 +100,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         {/* Avatar */}
         <div className="shrink-0 pt-0.5">
           {isUser ? (
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-slate-700 to-slate-900 text-white flex items-center justify-center shadow-sm">
-              <User className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-zinc-700 to-zinc-900 border border-white/15 text-white flex items-center justify-center shadow-md">
+              <User className="w-4 h-4 text-zinc-200" />
             </div>
           ) : (
             <BrandLogo size="sm" showText={false} />
@@ -111,31 +111,34 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         {/* Message Body */}
         <div className="flex-1 min-w-0">
           {/* Header info */}
-          <div className="flex items-center justify-between gap-2 mb-1.5">
+          <div className="flex items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+              <span className="text-xs font-bold text-zinc-100">
                 {isUser ? "You" : "ShawezGPT"}
               </span>
               {message.modelUsed && !isUser && (
-                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  {(() => {
-                    const raw = message.modelUsed.toLowerCase();
-                    if (raw.includes("ruflo")) return "Ruflo Swarm AI";
-                    if (raw.includes("pollinations")) return "Shawez Unlimited AI";
-                    if (raw.includes("claude")) return "Claude 3.5 Sonnet";
-                    if (raw.includes("gpt-4") || raw.includes("chatgpt")) return "ChatGPT-4o";
-                    if (raw.includes("deepseek")) return "DeepSeek-R1";
-                    if (raw.includes("llama")) return "Meta Llama 3.3";
-                    if (raw.includes("ollama") || raw.includes("qwen")) return message.modelUsed.replace(/^ollama[:\/]/, "Local: ");
-                    if (raw.includes("gemini")) return "ShawezGPT 4o Turbo";
-                    if (raw.includes("groq")) return "Shawez High-Speed LPU";
-                    if (raw.includes("openrouter")) return "Shawez Free Gateway";
-                    return message.modelUsed;
-                  })()}
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>
+                    {(() => {
+                      const raw = message.modelUsed.toLowerCase();
+                      if (raw.includes("ruflo")) return "Ruflo 6-AI Swarm";
+                      if (raw.includes("pollinations")) return "Shawez Unlimited AI";
+                      if (raw.includes("claude")) return "Claude 3.5 Sonnet";
+                      if (raw.includes("gpt-4") || raw.includes("chatgpt")) return "ChatGPT-4o";
+                      if (raw.includes("deepseek")) return "DeepSeek-R1";
+                      if (raw.includes("llama")) return "Meta Llama 3.3";
+                      if (raw.includes("ollama") || raw.includes("qwen")) return message.modelUsed.replace(/^ollama[:\/]/, "Local: ");
+                      if (raw.includes("gemini")) return "ShawezGPT 4o Turbo";
+                      if (raw.includes("groq")) return "Shawez High-Speed LPU";
+                      if (raw.includes("openrouter")) return "Shawez Free Gateway";
+                      return message.modelUsed;
+                    })()}
+                  </span>
                 </span>
               )}
             </div>
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">
+            <span className="text-[10px] font-mono text-zinc-500">
               {new Date(message.timestamp).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",

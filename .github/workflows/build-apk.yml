@@ -51,7 +51,7 @@ jobs:
         run: |
           mkdir -p apk-output
           mkdir -p releases
-          cp android/app/build/outputs/apk/debug/app-debug.apk apk-output/ShawezGPT-v1.1.9.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk apk-output/ShawezGPT-v1.2.0.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk apk-output/ShawezGPT-Latest.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk releases/ShawezGPT.apk
 
@@ -59,24 +59,25 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ShawezGPT-Android-APK
-          path: apk-output/ShawezGPT-v1.1.9.apk
+          path: apk-output/ShawezGPT-v1.2.0.apk
           retention-days: 30
 
-      - name: Publish GitHub Release v1.1.9
+      - name: Publish GitHub Release v1.2.0
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.1.9
-          name: "ShawezGPT v1.1.9 (Live API Research & Zero-Error Fix Edition)"
+          tag_name: v1.2.0
+          name: "ShawezGPT v1.2.0 (Ultra-Futuristic OLED Black Cyber GUI Edition)"
           body: |
-            ### 🌟 ShawezGPT v1.1.9 Production Fix Release
-            - **⚡ API Research & Live Fix**: Fixed Pollinations live endpoint from deprecated /openai path (which was returning 402) to https://text.pollinations.ai/.
-            - **🔄 Vite API Proxy**: Added local proxy in `vite.config.ts` for seamless routing from frontend to backend.
-            - **📱 Mobile APK Zero-Quota Engine**: Direct client-side streaming from Gemini 2.5 + Live Pollinations fallback.
-            - **🤖 Ruflo 6-AI Swarm Engine**: RufloIntelligence, RufloBrowser, RufloRAGMemory, RufloSwarmCoord, RufloAutoAgent, and RufloSecurity.
-            - **📱 Android APK**: Download `ShawezGPT.apk` or `ShawezGPT-v1.1.9.apk` below and install on Android.
+            ### 🖤 ShawezGPT v1.2.0 — Ultra-Advanced OLED Black Cyber GUI Edition
+
+            - **🖤 Pitch-Black OLED Dark Architecture**: Re-engineered full UI with true pitch-black `#000000` background, obsidian `#08080c` glass cards, and glowing neon accents.
+            - **⚡ High-Tech Holographic Command Center**: Updated Welcome Screen with glowing AI core radar, real-time 4M Tokens/Min status telemetry, and interactive cyber prompt cards.
+            - **💎 Floating Glassmorphic Command Dock**: Modernized bottom composer with neon focus ring, voice recording pulse, and glassmorphic attachments tray.
+            - **🤖 Live Ruflo 6-AI Swarm & Zero-Limit Telemetry**: Integrated live system status badges in Header and Sidebar.
+            - **📱 Mobile Android APK Ready**: Direct download `ShawezGPT.apk` or `ShawezGPT-v1.2.0.apk` below!
           files: |
-            apk-output/ShawezGPT-v1.1.9.apk
+            apk-output/ShawezGPT-v1.2.0.apk
             apk-output/ShawezGPT-Latest.apk
             releases/ShawezGPT.apk
         env:

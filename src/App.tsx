@@ -1155,7 +1155,7 @@ export default function App() {
   const hasMessages = Boolean(activeConversation && activeConversation.messages.length > 0);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased">
+    <div className="flex h-screen w-screen overflow-hidden bg-black text-zinc-100 font-sans antialiased cyber-grid select-none">
       {/* Sidebar Navigation */}
       <Sidebar
         isOpen={isSidebarOpen}
@@ -1191,7 +1191,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden bg-white dark:bg-slate-950">
+      <main className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden bg-black ambient-glow-emerald">
         {/* Header Bar */}
         <Header
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -1277,11 +1277,11 @@ export default function App() {
             {showScrollBottom && (
               <button
                 onClick={() => scrollToBottom("smooth")}
-                className="absolute bottom-28 right-6 z-20 p-2.5 rounded-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-xl hover:scale-105 transition-transform"
+                className="absolute bottom-28 right-6 z-20 p-2.5 rounded-full bg-[#0e0e15]/90 backdrop-blur-md text-zinc-200 border border-white/15 shadow-[0_8px_25px_rgba(0,0,0,0.9)] hover:border-emerald-500/50 hover:scale-105 transition-all cursor-pointer"
                 title="Scroll to bottom"
                 id="btn-scroll-bottom"
               >
-                <ArrowDown className="w-4 h-4" />
+                <ArrowDown className="w-4 h-4 text-emerald-400" />
               </button>
             )}
 
