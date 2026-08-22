@@ -176,21 +176,9 @@ export async function streamChatMessage({
     enableWebSearch,
   };
 
-  // Attempt Backend Server Stream First (with 3s timeout for mobile/APK)
+  // Attempt Backend Server Stream First
   try {
     const backendUrl = buildApiUrl("/api/chat/stream");
-    // On mobile APK, localhost:3000 is not available - use 3s timeout to detect quickly
-    const timeoutController = new AbortController();
-    const timeoutId = setTimeout(() => timeoutController.abort(), 3000);
-    const mergedSignal = signal
-      ? (() => {
-          // If user signal fires, abort too
-          const mc = new AbortController();
-          signal.addEventListener("abort", () => mc.abort());
-          timeoutController.signal.addEventListener("abort", () => mc.abort());
-          return mc.signal;
-        })()
-      : timeoutController.signal;
 
     const response = await fetch(backendUrl, {
       method: "POST",
@@ -198,9 +186,8 @@ export async function streamChatMessage({
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
-      signal: mergedSignal,
+      signal,
     });
-    clearTimeout(timeoutId);
 
     if (response.ok && response.body) {
       const reader = response.body.getReader();
@@ -253,13 +240,14 @@ export async function streamChatMessage({
         }
       }
 
-      return { fullText, sources };
+      if (fullText.trim().length > 0) {
+        return { fullText, sources };
+      }
     }
   } catch (backendErr: any) {
-    // Only re-throw if the user explicitly aborted (not our 3s timeout)
+    // Only re-throw if user explicitly clicked stop
     if (signal?.aborted) throw backendErr;
-    // Otherwise (timeout or network fail = no local server), fall through to direct engine
-    console.warn("[API] Backend server unavailable or timed out, falling back to standalone Unified AI engine...", backendErr?.message || backendErr);
+    console.warn("[API] Backend server stream error, falling back to standalone Unified AI engine...", backendErr?.message || backendErr);
   }
 
   // Standalone Client Fallback (e.g. mobile APK offline)
