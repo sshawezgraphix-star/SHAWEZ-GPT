@@ -287,7 +287,7 @@ export async function streamDirectGemini({
       pollMessages.unshift({ role: "system" as any, content: effectiveInstruction });
     }
 
-    const pollRes = await fetch("https://text.pollinations.ai/openai", {
+    const pollRes = await fetch("https://text.pollinations.ai/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -300,9 +300,15 @@ export async function streamDirectGemini({
     });
 
     if (pollRes.ok) {
-      const pollData = await pollRes.json();
-      const pollText = pollData.choices?.[0]?.message?.content || pollData.text || "";
-      if (pollText) {
+      const raw = await pollRes.text();
+      let pollText = "";
+      try {
+        const pollData = JSON.parse(raw);
+        pollText = pollData.choices?.[0]?.message?.content || pollData.text || raw;
+      } catch {
+        pollText = raw;
+      }
+      if (pollText && pollText.trim()) {
         onChunk(pollText);
         return { fullText: pollText, sources: [] };
       }

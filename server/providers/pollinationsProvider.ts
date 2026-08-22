@@ -64,7 +64,7 @@ export async function streamPollinations({
     try {
       console.log(`[Pollinations] Attempting free unlimited model: ${currentModel}`);
 
-      const response = await fetch("https://text.pollinations.ai/openai", {
+      const response = await fetch("https://text.pollinations.ai/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -167,7 +167,7 @@ export async function generatePollinations({
     });
   }
 
-  const response = await fetch("https://text.pollinations.ai/openai", {
+  const response = await fetch("https://text.pollinations.ai/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -180,6 +180,11 @@ export async function generatePollinations({
 
   if (!response.ok) throw new Error(`Pollinations HTTP ${response.status}`);
 
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || data.text || "";
+  const rawText = await response.text();
+  try {
+    const data = JSON.parse(rawText);
+    return data.choices?.[0]?.message?.content || data.text || rawText;
+  } catch {
+    return rawText;
+  }
 }
