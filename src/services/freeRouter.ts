@@ -121,7 +121,40 @@ export async function streamUnifiedAI({
 }: UnifiedStreamParams): Promise<{ fullText: string; sources: GroundingSource[]; modelUsed: string }> {
   const m = (modelId || "").toLowerCase();
 
-  // TIER 0: Local Ollama (if user selected an Ollama model)
+  // TIER 0: OmniRoute Universal Smart Intent Routing
+  if (m.includes("omni")) {
+    const lastMsg = messages.filter((msg) => msg.role === "user").pop();
+    const promptText = (lastMsg?.content || "").toLowerCase();
+    
+    let resolvedModel = "gemini-2.5-flash";
+    if (promptText.includes("code") || promptText.includes("function") || promptText.includes("error") || promptText.includes("bug") || promptText.includes("component") || promptText.includes("api") || promptText.includes("typescript")) {
+      resolvedModel = "claude-3-5-sonnet";
+    } else if (promptText.includes("prove") || promptText.includes("calculate") || promptText.includes("logic") || promptText.includes("math") || promptText.includes("why")) {
+      resolvedModel = "deepseek-r1";
+    } else if (promptText.includes("swarm") || promptText.includes("ruflo") || promptText.includes("security") || promptText.includes("audit")) {
+      resolvedModel = "gemini-2.5-pro";
+    }
+
+    try {
+      console.log(`[SmartRouter] OmniRoute dynamically selected: ${resolvedModel}`);
+      const res = await streamDirectGemini({
+        messages,
+        modelId: resolvedModel,
+        systemInstruction,
+        temperature,
+        enableWebSearch,
+        onChunk,
+        onGrounding,
+        signal,
+      });
+      return { fullText: res.fullText, sources: res.sources, modelUsed: `OmniRoute (${resolvedModel})` };
+    } catch (omniErr: any) {
+      if (signal?.aborted) throw omniErr;
+      console.warn(`[SmartRouter] OmniRoute primary failed, falling back to Flash...`);
+    }
+  }
+
+  // TIER 0.5: Local Ollama (if user selected an Ollama model)
   if (m.startsWith("ollama:") || m.startsWith("ollama/")) {
     try {
       console.log(`[SmartRouter] Routing to Local Ollama (${modelId})...`);

@@ -13,6 +13,7 @@ import { getGeminiKeyPool } from "./server/providers/geminiPool";
 import { getOllamaProvider, OllamaProvider } from "./server/providers/ollama";
 import { streamPollinations } from "./server/providers/pollinationsProvider";
 import { streamRufloSwarm, executeRufloSwarm } from "./server/providers/rufloSwarm";
+import { streamOmniRoute } from "./server/providers/omniRoute";
 
 dotenv.config();
 
@@ -75,13 +76,13 @@ function extractCleanErrorMessage(error: any): string {
 
 const AVAILABLE_MODELS = [
   {
-    id: "claude-3-5-sonnet",
-    name: "Claude 3.5 Sonnet (Anthropic)",
-    description: "The world's #1 model for expert coding, flawless resume writing, complex logic, and professional document generation.",
-    contextWindow: "200K tokens",
-    badge: "Top Flagship",
-    category: "Pro Intelligence",
-    provider: "puter",
+    id: "omni-route",
+    name: "OmniRoute AI (Auto-Intelligence)",
+    description: "Universal meta-intelligence that automatically detects your task intent and routes to the best flagship model or multi-agent swarm.",
+    contextWindow: "1M tokens",
+    badge: "Auto Omni",
+    category: "Smart Auto",
+    provider: "omni",
     supportsSearch: true,
     supportsVision: true,
   },
@@ -90,7 +91,18 @@ const AVAILABLE_MODELS = [
     name: "ChatGPT GPT-4o (OpenAI)",
     description: "OpenAI flagship intelligence for multifaceted reasoning, creativity, STEM, and full-stack development.",
     contextWindow: "128K tokens",
-    badge: "OpenAI Flagship",
+    badge: "ChatGPT-4o",
+    category: "Pro Intelligence",
+    provider: "puter",
+    supportsSearch: true,
+    supportsVision: true,
+  },
+  {
+    id: "claude-3-5-sonnet",
+    name: "Claude 3.5 Sonnet (Anthropic)",
+    description: "The world's #1 model for expert coding, flawless resume writing, complex logic, and professional document generation.",
+    contextWindow: "200K tokens",
+    badge: "Top Flagship",
     category: "Pro Intelligence",
     provider: "puter",
     supportsSearch: true,
@@ -104,6 +116,17 @@ const AVAILABLE_MODELS = [
     badge: "Deep Reasoning",
     category: "Pro Intelligence",
     provider: "puter",
+    supportsSearch: true,
+    supportsVision: true,
+  },
+  {
+    id: "ruflo-swarm",
+    name: "Ruflo Swarm Coordinator (6 AI Swarm)",
+    description: "Autonomous multi-agent swarm combining RufloIntelligence, RufloBrowser, RufloRAGMemory, RufloAutoAgent, and RufloSecurity.",
+    contextWindow: "1M tokens",
+    badge: "Ruflo Swarm",
+    category: "Autonomous Swarm",
+    provider: "ruflo",
     supportsSearch: true,
     supportsVision: true,
   },
@@ -317,9 +340,36 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
       return;
     }
 
+    const isOmniSelected = (model || "").toLowerCase().includes("omni");
+
+    // CASE 0: OmniRoute Universal Auto-Intelligence
+    if (isOmniSelected) {
+      try {
+        const omniRes = await streamOmniRoute({
+          messages,
+          systemInstruction,
+          temperature: Number(temperature) || 0.7,
+          enableWebSearch,
+          onChunk: (text, modelUsed) => {
+            sendEvent("chunk", { text, modelUsed });
+          },
+        });
+
+        sendEvent("done", {
+          fullText: omniRes.fullText,
+          sources: [],
+          modelUsed: omniRes.modelUsed,
+        });
+        res.end();
+        return;
+      } catch (omniErr: any) {
+        console.error("OmniRoute streaming error, falling back to standard pool:", omniErr);
+      }
+    }
+
     const isRufloSelected = (model || "").toLowerCase().startsWith("ruflo");
 
-    // CASE 0: User selected Ruflo Swarm Agent Mode
+    // CASE 0.5: User selected Ruflo Swarm Agent Mode
     if (isRufloSelected) {
       try {
         const lastUserMsg = messages.filter((m) => m.role === "user").pop();
@@ -459,11 +509,11 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
       personaInstruction = "You are ShawezGPT, an ultra-powerful, friendly, and expert AI assistant. Deliver clear, accurate, and beautifully structured responses with markdown headings, bullet points, and clean code blocks.";
     }
 
-    const creatorRule = "CRITICAL IDENTITY RULE: You are ShawezGPT, created and developed by Shawez (Shawez AI). If and ONLY IF the user explicitly asks who created or made you (e.g., 'who made you', 'kisne banaya', 'who is your creator'), state clearly and proudly that you were created and developed by Shawez (Shawez AI). On all other questions, answer the user's prompt directly, naturally, and intelligently in the user's chosen language (Hindi, Hinglish, or English) without introducing yourself repeatedly.\n\nAPP INSTALLATION & DOWNLOAD GUIDE: If the user asks how to download, install, or run ShawezGPT (e.g., 'app kaise install kare', 'download kaise kare', 'how to install apk'):\n1. 📱 **Android APK**: Download the latest `ShawezGPT.apk` from [GitHub Releases](https://github.com/sshawezgraphix-star/SHAWEZ-GPT/releases/latest). In phone settings, allow 'Install Unknown Apps', then open the downloaded file and tap Install.\n2. 🌐 **Web App (PWA / Mobile Shortcut)**: Open ShawezGPT in Chrome or Safari on mobile, tap the 3 dots (or Share icon), and click 'Add to Home screen' (Install App).\n3. 💻 **PC / Windows Setup**: Clone repo from `https://github.com/sshawezgraphix-star/SHAWEZ-GPT`, run `npm install`, then `npm run build` and `npm start`, and access at `http://localhost:3000`.\nProvide clear, friendly, and structured guidance in Hindi/Hinglish/English as requested!";
+    const coreRules = "You are ShawezGPT. Directly, accurately, and naturally answer the user's prompt in the language requested (Hindi, Hinglish, English, etc.). Do not include robot preambles or unwanted introductions. If and ONLY IF explicitly asked who made/created you, state that you were created by Shawez (Shawez AI). If and ONLY IF asked how to download/install the app, share the GitHub release link (https://github.com/sshawezgraphix-star/SHAWEZ-GPT/releases/latest).";
 
     const effectiveInstruction = (systemInstruction && typeof systemInstruction === "string" && systemInstruction.trim())
-      ? `${creatorRule}\n\n${personaInstruction}\n\n${systemInstruction.trim()}`
-      : `${creatorRule}\n\n${personaInstruction}`;
+      ? `${coreRules}\n\n${personaInstruction}\n\n${systemInstruction.trim()}`
+      : `${coreRules}\n\n${personaInstruction}`;
 
     config.systemInstruction = effectiveInstruction;
 
