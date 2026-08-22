@@ -283,7 +283,7 @@ export class GeminiKeyPool {
       throw new Error("No Gemini API Keys configured. Please set GEMINI_API_KEY, GEMINI_API_KEY_2, or GEMINI_API_KEY_3 in .env");
     }
 
-    const modelsToTry = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest"];
+    const modelsToTry = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-flash-latest"];
     const keyCandidates = this.getKeyCandidates();
     let lastError: any = null;
 
@@ -319,7 +319,7 @@ export class GeminiKeyPool {
 
           if (isQuota) {
             console.warn(`[GeminiPool] Key ${tele.id} (${tele.maskedKey}) hit quota/rate limit: ${message}. Rotating to next API key...`);
-            this.markKeyCooldown(currentKey, 60 * 1000, "Quota/Rate Limit Reached (429)");
+            this.markKeyCooldown(currentKey, 15 * 1000, "Quota/Rate Limit Reached (429)");
             // Break inner model loop to switch key immediately
             break;
           } else if (isOverload) {

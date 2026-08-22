@@ -120,6 +120,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   {(() => {
                     const raw = message.modelUsed.toLowerCase();
+                    if (raw.includes("ruflo")) return "Ruflo Swarm AI";
+                    if (raw.includes("pollinations")) return "Shawez Unlimited AI";
                     if (raw.includes("claude")) return "Claude 3.5 Sonnet";
                     if (raw.includes("gpt-4") || raw.includes("chatgpt")) return "ChatGPT-4o";
                     if (raw.includes("deepseek")) return "DeepSeek-R1";

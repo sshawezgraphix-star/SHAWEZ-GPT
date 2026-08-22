@@ -274,5 +274,43 @@ export async function streamDirectGemini({
     }
   }
 
+  // Client-Side Emergency Fallback to Pollinations.ai (100% Free Unlimited, No Key)
+  console.warn("[DirectGemini] All Gemini keys exhausted. Attempting Pollinations Free Engine fallback...");
+  try {
+    onChunk("> ⚡ *Shawez Mobile Engine: Switching to Unlimited Free AI Mode...*\n\n");
+    const pollMessages = messages.map((m) => ({
+      role: m.role === "assistant" ? "assistant" : "user",
+      content: m.content || "Hello",
+    }));
+
+    if (effectiveInstruction) {
+      pollMessages.unshift({ role: "system" as any, content: effectiveInstruction });
+    }
+
+    const pollRes = await fetch("https://text.pollinations.ai/openai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "openai",
+        messages: pollMessages,
+        stream: false,
+        temperature,
+      }),
+      signal,
+    });
+
+    if (pollRes.ok) {
+      const pollData = await pollRes.json();
+      const pollText = pollData.choices?.[0]?.message?.content || pollData.text || "";
+      if (pollText) {
+        onChunk(pollText);
+        return { fullText: pollText, sources: [] };
+      }
+    }
+  } catch (pollErr: any) {
+    if (pollErr.name === "AbortError") throw pollErr;
+    console.error("[DirectGemini] Pollinations fallback failed:", pollErr);
+  }
+
   throw lastError || new Error("All Gemini API keys in the pool failed to respond. Please check your internet connection.");
 }

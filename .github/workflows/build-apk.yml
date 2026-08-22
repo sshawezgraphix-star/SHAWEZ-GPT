@@ -51,7 +51,7 @@ jobs:
         run: |
           mkdir -p apk-output
           mkdir -p releases
-          cp android/app/build/outputs/apk/debug/app-debug.apk apk-output/ShawezGPT-v1.1.7.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk apk-output/ShawezGPT-v1.1.8.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk apk-output/ShawezGPT-Latest.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk releases/ShawezGPT.apk
 
@@ -59,23 +59,24 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ShawezGPT-Android-APK
-          path: apk-output/ShawezGPT-v1.1.7.apk
+          path: apk-output/ShawezGPT-v1.1.8.apk
           retention-days: 30
 
-      - name: Publish GitHub Release v1.1.7
+      - name: Publish GitHub Release v1.1.8
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.1.7
-          name: "ShawezGPT v1.1.7 - Mobile APK Instant Reply Fix"
+          tag_name: v1.1.8
+          name: "ShawezGPT v1.1.8 (Zero Limit Engine + Ruflo 6-AI Swarm Edition)"
           body: |
-            ### 🔧 ShawezGPT v1.1.7 - Mobile APK Fix
-            - **✅ APK Reply Fix**: Android APK now works 100% without needing a PC server.
-            - **⚡ 3-Second Smart Fallback**: APK detects no local server in 3s and instantly switches to direct Gemini engine.
-            - **🔑 Direct API Mode**: All 4 Gemini keys work directly from the APK (4M tokens/min).
-            - **📱 Download & Install**: Get `ShawezGPT.apk` or `ShawezGPT-v1.1.7.apk` below.
+            ### 🌟 ShawezGPT v1.1.8 SuperApp Release
+            - **⚡ 100% Zero-Limit Engine**: Reduced cooldown to 15s + Added Pollinations.ai unlimited free AI fallback when all Gemini keys are busy.
+            - **🤖 Ruflo 6-AI Autonomous Swarm**: Integrated RufloIntelligence, RufloBrowser, RufloRAGMemory, RufloSwarmCoord, RufloAutoAgent, and RufloSecurity.
+            - **📱 Mobile APK Offline Direct Mode**: Android APK connects directly to Gemini & Pollinations without needing a PC server.
+            - **🎨 100% Free AI Image Studio**: Flux Pro, Photoreal 8K, Anime, 3D Render, and real-time photo editing.
+            - **📱 Android APK**: Download `ShawezGPT.apk` or `ShawezGPT-v1.1.8.apk` below and install on Android.
           files: |
-            apk-output/ShawezGPT-v1.1.7.apk
+            apk-output/ShawezGPT-v1.1.8.apk
             apk-output/ShawezGPT-Latest.apk
             releases/ShawezGPT.apk
         env:

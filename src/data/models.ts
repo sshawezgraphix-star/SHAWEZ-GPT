@@ -71,6 +71,16 @@ export const DEFAULT_MODELS: AIModel[] = [
     supportsSearch: true,
     supportsVision: true,
   },
+  {
+    id: "ruflo-swarm",
+    name: "Ruflo Swarm Coordinator (6 AI Swarm)",
+    description: "Multi-agent autonomous swarm combining RufloIntelligence, RufloBrowser, RufloRAGMemory, RufloAutoAgent, and RufloSecurity for complex tasks.",
+    contextWindow: "1M tokens",
+    badge: "Swarm AI",
+    category: "Autonomous Swarm",
+    supportsSearch: true,
+    supportsVision: true,
+  },
 ];
 
 export const ORCHESTRATOR_CAPABILITIES: OrchestratorCapabilityInfo[] = [

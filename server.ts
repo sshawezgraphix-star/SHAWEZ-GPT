@@ -11,6 +11,8 @@ import {
 import { sanitizeCredentials } from "./server/memory/sanitizer";
 import { getGeminiKeyPool } from "./server/providers/geminiPool";
 import { getOllamaProvider, OllamaProvider } from "./server/providers/ollama";
+import { streamPollinations } from "./server/providers/pollinationsProvider";
+import { streamRufloSwarm, executeRufloSwarm } from "./server/providers/rufloSwarm";
 
 dotenv.config();
 
@@ -315,6 +317,42 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
       return;
     }
 
+    const isRufloSelected = (model || "").toLowerCase().startsWith("ruflo");
+
+    // CASE 0: User selected Ruflo Swarm Agent Mode
+    if (isRufloSelected) {
+      try {
+        const lastUserMsg = messages.filter((m) => m.role === "user").pop();
+        const userPrompt = lastUserMsg?.content || "Help me with this task.";
+        const contextMessages = messages.slice(0, -1).map((m) => `${m.role}: ${m.content}`).join("\n");
+
+        let streamText = "";
+        const fullOutput = await streamRufloSwarm(
+          {
+            prompt: userPrompt,
+            context: contextMessages || undefined,
+            model,
+            systemInstruction,
+          },
+          (chunk) => {
+            streamText += chunk;
+            sendEvent("chunk", { text: chunk, modelUsed: "ruflo-swarm" });
+          }
+        );
+
+        sendEvent("done", {
+          fullText: fullOutput,
+          sources: [],
+          modelUsed: "ruflo-swarm",
+        });
+        res.end();
+        return;
+      } catch (rufloErr: any) {
+        console.error("Ruflo Swarm error, falling back to Gemini pool:", rufloErr);
+        // Continue to Gemini pool below
+      }
+    }
+
     const isOllamaSelected = OllamaProvider.isOllamaModelId(model);
 
     // CASE 1: User explicitly selected an Ollama Model
@@ -474,7 +512,38 @@ app.post("/api/chat/stream", async (req: Request, res: Response) => {
         return;
       }
 
-      throw geminiPoolErr;
+      // ULTIMATE EMERGENCY FALLBACK: Pollinations.ai 100% Free & Unlimited AI
+      console.warn("Ollama not connected. Activating Pollinations Unlimited Free Engine fallback...");
+      try {
+        sendEvent("chunk", {
+          text: `> ⚡ *Shawez High-Speed Failover: Connecting to Unlimited Multi-Model Backup Engine...*\n\n`,
+          modelUsed: "pollinations:openai",
+        });
+
+        const pollResult = await streamPollinations({
+          messages: messages.map((m) => ({
+            role: m.role,
+            content: m.content || "",
+          })),
+          model: "openai",
+          systemInstruction: effectiveInstruction,
+          temperature: Number(temperature) || 0.7,
+          onChunk: (text) => {
+            sendEvent("chunk", { text, modelUsed: "pollinations:openai" });
+          },
+        });
+
+        sendEvent("done", {
+          fullText: pollResult.fullText,
+          sources: [],
+          modelUsed: "pollinations:openai",
+        });
+        res.end();
+        return;
+      } catch (pollErr: any) {
+        console.error("Pollinations fallback failed:", pollErr);
+        throw geminiPoolErr;
+      }
     }
 
     const { responseStream, modelUsed, keyId } = streamResult;
