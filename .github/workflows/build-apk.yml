@@ -51,7 +51,7 @@ jobs:
         run: |
           mkdir -p apk-output
           mkdir -p releases
-          cp android/app/build/outputs/apk/debug/app-debug.apk apk-output/ShawezGPT-v1.1.6.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk apk-output/ShawezGPT-v1.1.7.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk apk-output/ShawezGPT-Latest.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk releases/ShawezGPT.apk
 
@@ -59,25 +59,23 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ShawezGPT-Android-APK
-          path: apk-output/ShawezGPT-v1.1.6.apk
+          path: apk-output/ShawezGPT-v1.1.7.apk
           retention-days: 30
 
-      - name: Publish GitHub Release v1.1.6
+      - name: Publish GitHub Release v1.1.7
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.1.6
-          name: "ShawezGPT v1.1.6 (Zero-Limit Multi-Swarm & AI Image Studio Edition)"
+          tag_name: v1.1.7
+          name: "ShawezGPT v1.1.7 - Mobile APK Instant Reply Fix"
           body: |
-            ### 🌟 ShawezGPT v1.1.6 SuperApp Android Release
-            - **⚡ 4-Key Zero Rate Limit Engine**: Automatic round-robin load balancing & 0ms failover across 4 Gemini API keys (4,000,000 Tokens/Min).
-            - **🎨 100% Free AI Image Studio**: Flux Pro, Photoreal 8K, Anime, 3D Render, and real-time photo editing suite.
-            - **🧠 World-Class Flagship Models**: Claude 3.5 Sonnet, ChatGPT-4o, DeepSeek-R1, and Meta Llama 3.3.
-            - **🦙 Ollama Zero-Timeout Native Socket Engine**: Instant streaming without connection drops.
-            - **📄 1-Click Resume & PDF Studio**: Draft ATS resumes and compile professional reports on mobile.
-            - **📱 Android APK**: Download `ShawezGPT.apk` or `ShawezGPT-v1.1.6.apk` below and install on Android.
+            ### 🔧 ShawezGPT v1.1.7 - Mobile APK Fix
+            - **✅ APK Reply Fix**: Android APK now works 100% without needing a PC server.
+            - **⚡ 3-Second Smart Fallback**: APK detects no local server in 3s and instantly switches to direct Gemini engine.
+            - **🔑 Direct API Mode**: All 4 Gemini keys work directly from the APK (4M tokens/min).
+            - **📱 Download & Install**: Get `ShawezGPT.apk` or `ShawezGPT-v1.1.7.apk` below.
           files: |
-            apk-output/ShawezGPT-v1.1.6.apk
+            apk-output/ShawezGPT-v1.1.7.apk
             apk-output/ShawezGPT-Latest.apk
             releases/ShawezGPT.apk
         env:
